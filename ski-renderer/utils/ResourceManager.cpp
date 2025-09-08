@@ -1,3 +1,4 @@
+// In ResourceManager.cpp
 #include "ResourceManager.h"
 
 #include <fstream>
@@ -7,7 +8,8 @@
 bool ResourceManager::loadGeometry(
     const std::filesystem::path &path,
     std::vector<float> &pointData,
-    std::vector<uint16_t> &indexData)
+    std::vector<uint16_t> &indexData,
+    int dimensions)
 {
     std::ifstream file(path);
     if (!file.is_open())
@@ -55,7 +57,7 @@ bool ResourceManager::loadGeometry(
         {
             std::istringstream iss(line);
             // Get x, y, r, g, b
-            for (int i = 0; i < 5; ++i)
+            for (int i = 0; i < dimensions + 3; ++i)
             {
                 iss >> value;
                 pointData.push_back(value);
@@ -94,7 +96,6 @@ WGPUShaderModule ResourceManager::loadShaderModule(const std::filesystem::path &
     shaderCodeDesc.code = shaderSource.c_str();
 
     WGPUShaderModuleDescriptor shaderDesc{};
-    shaderDesc.nextInChain = nullptr;
 #ifdef WEBGPU_BACKEND_WGPU
     shaderDesc.hintCount = 0;
     shaderDesc.hints = nullptr;

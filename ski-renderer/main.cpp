@@ -70,6 +70,8 @@ private:
 	WGPUPipelineLayout layout;
 	WGPUBindGroupLayout bindGroupLayout;
 	WGPUBindGroup bindGroup;
+	WGPUTexture depthTexture;
+	WGPUTextureView depthTextureView;
 };
 
 int main()
@@ -119,6 +121,28 @@ void setDefault(WGPUBindGroupLayoutEntry &bindingLayout)
 	bindingLayout.texture.multisampled = false;
 	bindingLayout.texture.sampleType = WGPUTextureSampleType_Undefined;
 	bindingLayout.texture.viewDimension = WGPUTextureViewDimension_Undefined;
+}
+
+void setDefault(WGPUStencilFaceState &stencilFaceState)
+{
+	stencilFaceState.compare = WGPUCompareFunction_Always;
+	stencilFaceState.failOp = WGPUStencilOperation_Keep;
+	stencilFaceState.depthFailOp = WGPUStencilOperation_Keep;
+	stencilFaceState.passOp = WGPUStencilOperation_Keep;
+}
+
+void setDefault(WGPUDepthStencilState &depthStencilState)
+{
+	depthStencilState.format = WGPUTextureFormat_Undefined;
+	depthStencilState.depthWriteEnabled = false;
+	depthStencilState.depthCompare = WGPUCompareFunction_Always;
+	depthStencilState.stencilReadMask = 0xFFFFFFFF;
+	depthStencilState.stencilWriteMask = 0xFFFFFFFF;
+	depthStencilState.depthBias = 0;
+	depthStencilState.depthBiasSlopeScale = 0;
+	depthStencilState.depthBiasClamp = 0;
+	setDefault(depthStencilState.stencilFront);
+	setDefault(depthStencilState.stencilBack);
 }
 
 bool Application::Initialize()
@@ -203,6 +227,9 @@ void Application::Terminate()
 	wgpuBufferRelease(uniformBuffer);
 	wgpuBufferRelease(pointBuffer);
 	wgpuBufferRelease(indexBuffer);
+	wgpuTextureViewRelease(depthTextureView);
+	wgpuTextureDestroy(depthTexture);
+	wgpuTextureRelease(depthTexture);
 	wgpuRenderPipelineRelease(pipeline);
 	wgpuSurfaceUnconfigure(surface);
 	wgpuQueueRelease(queue);
@@ -247,9 +274,20 @@ void Application::MainLoop()
 	renderPassColorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 #endif // NOT WEBGPU_BACKEND_WGPU
 
+	WGPURenderPassDepthStencilAttachment depthStencilAttachment = {};
+	depthStencilAttachment.view = depthTextureView;
+	depthStencilAttachment.depthClearValue = 1.0f;
+	depthStencilAttachment.depthLoadOp = WGPULoadOp_Clear;
+	depthStencilAttachment.depthStoreOp = WGPUStoreOp_Store;
+	depthStencilAttachment.depthReadOnly = false;
+	depthStencilAttachment.stencilClearValue = 0;
+	depthStencilAttachment.stencilLoadOp = WGPULoadOp_Undefined;
+	depthStencilAttachment.stencilStoreOp = WGPUStoreOp_Undefined;
+	depthStencilAttachment.stencilReadOnly = true;
+
 	renderPassDesc.colorAttachmentCount = 1;
 	renderPassDesc.colorAttachments = &renderPassColorAttachment;
-	renderPassDesc.depthStencilAttachment = nullptr;
+	renderPassDesc.depthStencilAttachment = &depthStencilAttachment;
 	renderPassDesc.timestampWrites = nullptr;
 
 	WGPURenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
@@ -359,19 +397,19 @@ void Application::InitializePipeline()
 
 	// Describe the position attribute
 	vertexAttribs[0].shaderLocation = 0; // @location(0)
-	vertexAttribs[0].format = WGPUVertexFormat_Float32x2;
+	vertexAttribs[0].format = WGPUVertexFormat_Float32x3;
 	vertexAttribs[0].offset = 0;
 
 	// Describe the color attribute
-	vertexAttribs[1].shaderLocation = 1;				  // @location(1)
-	vertexAttribs[1].format = WGPUVertexFormat_Float32x3; // different type!
-	vertexAttribs[1].offset = 2 * sizeof(float);		  // non null offset!
+	vertexAttribs[1].shaderLocation = 1; // @location(1)
+	vertexAttribs[1].format = WGPUVertexFormat_Float32x3;
+	vertexAttribs[1].offset = 3 * sizeof(float);
 
 	vertexBufferLayout.attributeCount = static_cast<uint32_t>(vertexAttribs.size());
 	vertexBufferLayout.attributes = vertexAttribs.data();
 
-	vertexBufferLayout.arrayStride = 5 * sizeof(float);
-	//                               ^^^^^^^^^^^^^^^^^ The new stride
+	vertexBufferLayout.arrayStride = 6 * sizeof(float);
+
 	vertexBufferLayout.stepMode = WGPUVertexStepMode_Vertex;
 
 	pipelineDesc.vertex.bufferCount = 1;
@@ -429,8 +467,40 @@ void Application::InitializePipeline()
 	fragmentState.targets = &colorTarget;
 	pipelineDesc.fragment = &fragmentState;
 
-	// We do not use stencil/depth testing for now
-	pipelineDesc.depthStencil = nullptr;
+	WGPUTextureFormat depthTextureFormat = WGPUTextureFormat_Depth24Plus;
+
+	WGPUDepthStencilState depthStencilState = {};
+	setDefault(depthStencilState);
+	depthStencilState.depthCompare = WGPUCompareFunction_Less;
+	depthStencilState.depthWriteEnabled = true;
+	depthStencilState.format = depthTextureFormat;
+	depthStencilState.stencilReadMask = 0;
+	depthStencilState.stencilWriteMask = 0;
+
+	pipelineDesc.depthStencil = &depthStencilState;
+
+	WGPUTextureDescriptor depthTextureDesc = {};
+	depthTextureDesc.nextInChain = nullptr;
+	depthTextureDesc.label = nullptr;
+	depthTextureDesc.dimension = WGPUTextureDimension_2D;
+	depthTextureDesc.format = depthTextureFormat;
+	depthTextureDesc.mipLevelCount = 1;
+	depthTextureDesc.sampleCount = 1;
+	depthTextureDesc.size = {640, 480, 1};
+	depthTextureDesc.usage = WGPUTextureUsage_RenderAttachment;
+	depthTextureDesc.viewFormatCount = 1;
+	depthTextureDesc.viewFormats = &depthTextureFormat;
+	depthTexture = wgpuDeviceCreateTexture(device, &depthTextureDesc);
+
+	WGPUTextureViewDescriptor depthTextureViewDesc = {};
+	depthTextureViewDesc.aspect = WGPUTextureAspect_DepthOnly;
+	depthTextureViewDesc.baseArrayLayer = 0;
+	depthTextureViewDesc.arrayLayerCount = 1;
+	depthTextureViewDesc.baseMipLevel = 0;
+	depthTextureViewDesc.mipLevelCount = 1;
+	depthTextureViewDesc.dimension = WGPUTextureViewDimension_2D;
+	depthTextureViewDesc.format = depthTextureFormat;
+	depthTextureView = wgpuTextureCreateView(depthTexture, &depthTextureViewDesc);
 
 	// Samples per pixel
 	pipelineDesc.multisample.count = 1;
@@ -483,7 +553,7 @@ void Application::InitializeBuffers()
 	std::vector<uint16_t> indexData;
 
 	// Here we use the new 'loadGeometry' function:
-	bool success = ResourceManager::loadGeometry("models/webgpu.txt", pointData, indexData);
+	bool success = ResourceManager::loadGeometry("models/pyramid.txt", pointData, indexData, 3);
 
 	// Check for errors
 	if (!success)
