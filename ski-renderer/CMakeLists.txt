@@ -5,15 +5,28 @@ project(
 	LANGUAGES CXX C
 )
 
+if (NOT EMSCRIPTEN)
+    # Add the 'glfw' directory, which contains the definition of a 'glfw' target
+    add_subdirectory(glfw)
+else()
+    # Create a mock 'glfw' target that just sets the `-sUSE_GLFW=3` link option:
+    add_library(glfw INTERFACE)
+    target_link_options(glfw INTERFACE -sUSE_GLFW=3)
+endif()
+
 add_subdirectory(webgpu)
+
+add_subdirectory(glfw3webgpu)
 
 add_executable(App
 	main.cpp
 	utils/wgpu-utils.h
 	utils/wgpu-utils.cpp
+	utils/ResourceManager.h
+	utils/ResourceManager.cpp
 )
 
-target_link_libraries(App PRIVATE webgpu)
+target_link_libraries(App PRIVATE glfw webgpu glfw3webgpu)
 
 target_copy_webgpu_binaries(App)
 
