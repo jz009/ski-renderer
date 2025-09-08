@@ -6,27 +6,44 @@ project(
 )
 
 if (NOT EMSCRIPTEN)
-    # Add the 'glfw' directory, which contains the definition of a 'glfw' target
-    add_subdirectory(glfw)
+	add_subdirectory(glfw)
 else()
-    # Create a mock 'glfw' target that just sets the `-sUSE_GLFW=3` link option:
-    add_library(glfw INTERFACE)
-    target_link_options(glfw INTERFACE -sUSE_GLFW=3)
+	add_library(glfw INTERFACE)
+	target_link_options(glfw INTERFACE -sUSE_GLFW=3)
 endif()
 
 add_subdirectory(webgpu)
 
-add_subdirectory(glfw3webgpu)
-
 add_executable(App
 	main.cpp
-	utils/wgpu-utils.h
-	utils/wgpu-utils.cpp
+    utils/wgpu-utils.cpp
+    utils/wgpu-utils.h
+    utils/ResourceManager.cpp
 	utils/ResourceManager.h
-	utils/ResourceManager.cpp
+    utils/glfw3webgpu.c
+	utils/glfw3webgpu.h
 )
 
-target_link_libraries(App PRIVATE glfw webgpu glfw3webgpu)
+target_link_libraries(App PRIVATE glfw webgpu)
+
+# We add an option to enable different settings when developing the app than
+# when distributing it.
+option(DEV_MODE "Set up development helper settings" ON)
+
+if(DEV_MODE)
+    # In dev mode, we load resources from the source tree, so that when we
+    # dynamically edit resources (like shaders), these are correctly
+    # versionned.
+    target_compile_definitions(App PRIVATE
+        RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/resources"
+    )
+else()
+    # In release mode, we just load resources relatively to wherever the
+    # executable is launched from, so that the binary is portable
+    target_compile_definitions(App PRIVATE
+        RESOURCE_DIR="./resources"
+    )
+endif()
 
 target_copy_webgpu_binaries(App)
 
@@ -52,5 +69,8 @@ endif()
 
 if (EMSCRIPTEN)
 	set_target_properties(App PROPERTIES SUFFIX ".html")
-	target_link_options(App PRIVATE -sASYNCIFY)
+	target_link_options(App PRIVATE
+		-sASYNCIFY
+		--preload-file "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+	)
 endif()

@@ -1,5 +1,6 @@
 #include "utils/wgpu-utils.h"
 #include "utils/ResourceManager.h"
+#include "utils/glfw3webgpu.h"
 
 #include <webgpu/webgpu.h>
 #ifdef WEBGPU_BACKEND_WGPU
@@ -7,7 +8,6 @@
 #endif // WEBGPU_BACKEND_WGPU
 
 #include <GLFW/glfw3.h>
-#include <glfw3webgpu.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
