@@ -2,6 +2,13 @@
 #include "utils/ResourceManager.h"
 #include "utils/glfw3webgpu.h"
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_FORCE_LEFT_HANDED
+#include "glm/glm.hpp"
+#include "glm/ext.hpp"
+
+#include <math.h>
+
 #include <webgpu/webgpu.h>
 #ifdef WEBGPU_BACKEND_WGPU
 #include <webgpu/wgpu.h>
@@ -17,6 +24,8 @@
 #include <cassert>
 #include <vector>
 #include <array>
+
+constexpr float PI = 3.14159265358979323846f;
 
 class Application
 {
@@ -40,7 +49,10 @@ private:
 	 */
 	struct MyUniforms
 	{
-		std::array<float, 4> color; // or float color[4]
+		glm::mat4x4 projectionMatrix;
+		glm::mat4x4 viewMatrix;
+		glm::mat4x4 modelMatrix;
+		std::array<float, 4> color;
 		float time;
 		float _pad[3];
 	};
@@ -72,6 +84,7 @@ private:
 	WGPUBindGroup bindGroup;
 	WGPUTexture depthTexture;
 	WGPUTextureView depthTextureView;
+	MyUniforms uniforms;
 };
 
 int main()
@@ -304,6 +317,15 @@ void Application::MainLoop()
 
 	// Set binding group here!
 	wgpuRenderPassEncoderSetBindGroup(renderPass, 0, bindGroup, 0, nullptr);
+	uniforms.time = static_cast<float>(glfwGetTime()); // glfwGetTime returns a double
+	// Only update the 1-st float of the buffer
+	wgpuQueueWriteBuffer(queue, uniformBuffer, offsetof(MyUniforms, time), &uniforms.time, sizeof(MyUniforms::time));
+	float angle1 = uniforms.time;
+	glm::mat4x4 scale = glm::scale(glm::mat4x4(1.0), glm::vec3(0.3f));
+	glm::mat4x4 transpose = glm::translate(glm::mat4x4(1.0), glm::vec3(0.5, 0.0, 0.0));
+	glm::mat4x4 rotation = glm::rotate(glm::mat4x4(1.0), angle1, glm::vec3(0.0, 0.0, 1.0));
+	uniforms.modelMatrix = rotation * transpose * scale;
+	wgpuQueueWriteBuffer(queue, uniformBuffer, offsetof(MyUniforms, modelMatrix), &uniforms.modelMatrix, sizeof(MyUniforms::modelMatrix));
 
 	// Replace `draw()` with `drawIndexed()` and `vertexCount` with `indexCount`
 	// The extra argument is an offset within the index buffer.
@@ -599,7 +621,37 @@ void Application::InitializeBuffers()
 	uniformBuffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
 
 	// Upload the initial value of the uniforms
-	MyUniforms uniforms;
+	glm::vec3 focalPoint(0.0, 0.0, -2.0);
+	float angle1 = 2.0f; // arbitrary time
+	float angle2 = 3.0f * PI / 4.0f;
+	float ratio = 640.0f / 480.0f;
+	float focalLength = 2.0;
+	float near = 0.01f;
+	float far = 100.0f;
+	glm::mat4x4 S = glm::scale(glm::mat4x4(1.0), glm::vec3(0.3f));
+	glm::mat4x4 T1 = glm::translate(glm::mat4x4(1.0), glm::vec3(0.5, 0.0, 0.0));
+	glm::mat4x4 R1 = glm::rotate(glm::mat4x4(1.0), angle1, glm::vec3(0.0, 0.0, 1.0));
+	uniforms.modelMatrix = R1 * T1 * S;
+
+	glm::mat4x4 R2 = glm::rotate(glm::mat4x4(1.0), -angle2, glm::vec3(1.0, 0.0, 0.0));
+	glm::mat4x4 T2 = glm::translate(glm::mat4x4(1.0), -focalPoint);
+	uniforms.viewMatrix = T2 * R2;
+
+	// Option C: A different way of using GLM extensions
+	glm::mat4x4 M(1.0);
+	M = glm::rotate(M, angle1, glm::vec3(0.0, 0.0, 1.0));
+	M = glm::translate(M, glm::vec3(0.5, 0.0, 0.0));
+	M = glm::scale(M, glm::vec3(0.3f));
+	uniforms.modelMatrix = M;
+
+	glm::mat4x4 V(1.0);
+	V = glm::translate(V, -focalPoint);
+	V = glm::rotate(V, -angle2, glm::vec3(1.0, 0.0, 0.0));
+	uniforms.viewMatrix = V;
+
+	float fov = 2 * glm::atan(1 / focalLength);
+	uniforms.projectionMatrix = glm::perspective(fov, ratio, near, far);
+
 	uniforms.time = 1.0f;
 	uniforms.color = {0.0f, 1.0f, 0.4f, 1.0f};
 	wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &uniforms, sizeof(MyUniforms));
