@@ -25,27 +25,6 @@ struct MyUniforms {
 
 const pi = 3.14159265359;
 
-// Build an orthographic projection matrix
-fn makeOrthographicProj(ratio: f32, near: f32, far: f32, scale: f32) -> mat4x4f {
-	return transpose(mat4x4f(
-		1.0 / scale,      0.0,           0.0,                  0.0,
-		    0.0,     ratio / scale,      0.0,                  0.0,
-		    0.0,          0.0,      1.0 / (far - near), -near / (far - near),
-		    0.0,          0.0,           0.0,                  1.0,
-	));
-}
-
-// Build a perspective projection matrix
-fn makePerspectiveProj(ratio: f32, near: f32, far: f32, focalLength: f32) -> mat4x4f {
-	let divides = 1.0 / (far - near);
-	return transpose(mat4x4f(
-		focalLength,         0.0,              0.0,               0.0,
-		    0.0,     focalLength * ratio,      0.0,               0.0,
-		    0.0,             0.0,         far * divides, -far * near * divides,
-		    0.0,             0.0,              1.0,               0.0,
-	));
-}
-
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 	var out: VertexOutput;
