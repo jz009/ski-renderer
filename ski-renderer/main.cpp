@@ -28,7 +28,7 @@
 
 
 
-class Engine
+struct Engine
 {
 public:
 	// Initialize everything and return true if it went all right
@@ -59,6 +59,7 @@ public:
 
 int main()
 {
+	Engine engine;
 	Renderer renderer;
 	// Engine engine = Engine::Initialize(renderer);
 

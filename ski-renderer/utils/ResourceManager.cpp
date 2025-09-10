@@ -57,7 +57,7 @@ bool ResourceManager::loadGeometry(
         {
             std::istringstream iss(line);
             // Get x, y, r, g, b
-            for (int i = 0; i < dimensions + 3; ++i)
+            for (int i = 0; i < dimensions; ++i)
             {
                 iss >> value;
                 pointData.push_back(value);

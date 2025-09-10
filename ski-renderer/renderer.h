@@ -9,6 +9,8 @@
 #include "glm/ext.hpp"
 
 #include <cmath>
+#include <fstream>
+#include <sstream>
 
 #include <webgpu/webgpu.hpp>
 
@@ -31,11 +33,52 @@ struct Vertex
     float z;
 };
 
-class Renderer
+struct Uniforms
 {
+    glm::mat4x4 projectionMatrix;
+    glm::mat4x4 viewMatrix;
+    glm::mat4x4 modelMatrix;
+    std::array<float, 4> color;
+    float time;
+    float _pad[3];
+};
+
+struct Material
+{
+    std::string shaderPath;
+    Uniforms uniforms;
+};
+
+struct CircleMaterial : Material
+{
+    std::string shaderPath;
+    Uniforms uniforms;
+};
+
+struct Renderer
+{
+
+    struct PipelineDefaults
+    {
+        wgpu::PipelineLayout defaultLayout;
+        wgpu::TextureDescriptor depthTextureDesc;
+        wgpu::Texture depthTexture;
+        wgpu::TextureViewDescriptor depthTextureViewDesc;
+        wgpu::TextureView depthTextureView;
+        wgpu::TextureFormat depthTextureFormat = wgpu::TextureFormat::Depth24Plus;
+        wgpu::DepthStencilState defaultDepthStencilState;
+        wgpu::BindGroupLayoutDescriptor defaultBindGroupLayoutDesc;
+        wgpu::BindGroupLayoutEntry defaultBindingLayout;
+        wgpu::BindGroupLayout defaultBindGroupLayout;
+        wgpu::ColorTargetState defaultColorTarget;
+        wgpu::BlendState defaultBlendState;
+        wgpu::PipelineLayoutDescriptor defaultPipelineLayoutDescriptor;
+    };
+
 public:
     // Initialize everything and return true if it went all right
-    bool Initialize();
+    bool
+    Initialize();
 
     // Uninitialize everything that was initialized
     void Terminate();
@@ -46,36 +89,20 @@ public:
     // Return true as long as the main loop should keep on running
     bool IsRunning();
 
-    void updateUniforms();
-
-    void updateBuffers();
-
-    void draw();
-
-private:
-    // Internal structures
-    /**
-     * The same structure as in the shader, replicated in C++
-     */
-    struct MyUniforms
-    {
-        glm::mat4x4 projectionMatrix;
-        glm::mat4x4 viewMatrix;
-        glm::mat4x4 modelMatrix;
-        std::array<float, 4> color;
-        float time;
-        float _pad[3];
-    };
-    // Have the compiler check byte alignment
-    static_assert(sizeof(MyUniforms) % 16 == 0);
+    void draw(Material material);
 
 private:
     wgpu::TextureView GetNextSurfaceTextureView();
 
     // Substep of Initialize() that creates the render pipeline
-    void InitializePipeline();
+    void InitializePipelineDefaults();
     void InitializeBuffers();
     void InitializeBindGroups();
+    void updateUniforms();
+
+    void updateBuffers();
+    wgpu::ShaderModule createShaderModule(Material material);
+    void createPipeline(wgpu::ShaderModule shaderModule);
 
 private:
     // We put here all the variables that are shared between init and main loop
@@ -89,12 +116,13 @@ private:
     wgpu::Buffer indexBuffer;
     uint32_t indexCount;
     wgpu::Buffer uniformBuffer;
-    wgpu::PipelineLayout layout;
-    wgpu::BindGroupLayout bindGroupLayout;
+
     wgpu::BindGroup bindGroup;
-    wgpu::Texture depthTexture;
-    wgpu::TextureView depthTextureView;
-    MyUniforms uniforms;
+
+    Uniforms uniforms;
+
+    PipelineDefaults pipelineDefaults;
+
     // std::vector<Vertex> vertices;
     // std::vector<uint16_t> indices;
 };
@@ -167,7 +195,7 @@ bool Renderer::Initialize()
     // Release the adapter only after it has been fully utilized
     wgpuAdapterRelease(adapter);
 
-    InitializePipeline();
+    InitializePipelineDefaults();
     InitializeBuffers();
     InitializeBindGroups();
     return true;
@@ -176,14 +204,14 @@ bool Renderer::Initialize()
 void Renderer::Terminate()
 {
     wgpuBindGroupRelease(bindGroup);
-    wgpuPipelineLayoutRelease(layout);
-    wgpuBindGroupLayoutRelease(bindGroupLayout);
+    wgpuPipelineLayoutRelease(pipelineDefaults.defaultLayout);
+    wgpuBindGroupLayoutRelease(pipelineDefaults.defaultBindGroupLayout);
     wgpuBufferRelease(uniformBuffer);
     wgpuBufferRelease(pointBuffer);
     wgpuBufferRelease(indexBuffer);
-    wgpuTextureViewRelease(depthTextureView);
-    wgpuTextureDestroy(depthTexture);
-    wgpuTextureRelease(depthTexture);
+    wgpuTextureViewRelease(pipelineDefaults.depthTextureView);
+    wgpuTextureDestroy(pipelineDefaults.depthTexture);
+    wgpuTextureRelease(pipelineDefaults.depthTexture);
     wgpuRenderPipelineRelease(pipeline);
     wgpuSurfaceUnconfigure(surface);
     wgpuQueueRelease(queue);
@@ -197,10 +225,14 @@ void Renderer::MainLoop()
 {
     glfwPollEvents();
 
+    Material material = {"shaders/shader.wgsl", uniforms};
+    auto s = createShaderModule(material);
+    createPipeline(s);
+
     // Update uniform buffer
     float time = static_cast<float>(glfwGetTime());
     // Only update the 1-st float of the buffer
-    wgpuQueueWriteBuffer(queue, uniformBuffer, offsetof(MyUniforms, time), &time, sizeof(float));
+    wgpuQueueWriteBuffer(queue, uniformBuffer, offsetof(Uniforms, time), &time, sizeof(float));
 
     // Get the next target texture view
     wgpu::TextureView targetView = GetNextSurfaceTextureView();
@@ -226,10 +258,10 @@ void Renderer::MainLoop()
     renderPassColorAttachment.clearValue = wgpu::Color{0.05, 0.05, 0.05, 1.0};
 #ifndef WEBGPU_BACKEND_WGPU
     renderPassColorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-#endif 
+#endif
 
     wgpu::RenderPassDepthStencilAttachment depthStencilAttachment = {};
-    depthStencilAttachment.view = depthTextureView;
+    depthStencilAttachment.view = pipelineDefaults.depthTextureView;
     depthStencilAttachment.depthClearValue = 1.0f;
     depthStencilAttachment.depthLoadOp = wgpu::LoadOp::Clear;
     depthStencilAttachment.depthStoreOp = wgpu::StoreOp::Store;
@@ -261,14 +293,14 @@ void Renderer::MainLoop()
 
     uniforms.time = static_cast<float>(glfwGetTime());
     // Only update the 1st float of the buffer
-    wgpuQueueWriteBuffer(queue, uniformBuffer, offsetof(MyUniforms, time), &uniforms.time, sizeof(MyUniforms::time));
+    wgpuQueueWriteBuffer(queue, uniformBuffer, offsetof(Uniforms, time), &uniforms.time, sizeof(Uniforms::time));
     float angle1 = uniforms.time;
     glm::mat4x4 scale = glm::scale(glm::mat4x4(1.0), glm::vec3(0.3f));
     glm::mat4x4 transpose = glm::translate(glm::mat4x4(1.0), glm::vec3(0.5, 0.0, 0.0));
     glm::mat4x4 rotation = glm::rotate(glm::mat4x4(1.0), angle1, glm::vec3(0.0, 0.0, 1.0));
     uniforms.modelMatrix = rotation * transpose * scale;
-    wgpuQueueWriteBuffer(queue, uniformBuffer, offsetof(MyUniforms, modelMatrix), &uniforms.modelMatrix, sizeof(MyUniforms::modelMatrix));
-    //updateUniforms();
+    wgpuQueueWriteBuffer(queue, uniformBuffer, offsetof(Uniforms, modelMatrix), &uniforms.modelMatrix, sizeof(Uniforms::modelMatrix));
+    // updateUniforms();
 
     // Replace `draw()` with `drawIndexed()` and `vertexCount` with `indexCount`
     // The extra argument is an offset within the index buffer.
@@ -337,176 +369,72 @@ wgpu::TextureView Renderer::GetNextSurfaceTextureView()
     return targetView;
 }
 
-void Renderer::InitializePipeline()
+void Renderer::InitializePipelineDefaults()
 {
-    std::cout << "Creating shader module..." << std::endl;
-    wgpu::ShaderModule shaderModule = ResourceManager::loadShaderModule("shaders/shader.wgsl", device);
-    std::cout << "Shader module: " << shaderModule << std::endl;
+    pipelineDefaults = {};
 
-    // Check for errors
-    if (shaderModule == nullptr)
-    {
-        std::cerr << "Could not load shader!" << std::endl;
-        exit(1);
-    }
+    pipelineDefaults.defaultBlendState = {};
+    pipelineDefaults.defaultBlendState.color.srcFactor = wgpu::BlendFactor::SrcAlpha;
+    pipelineDefaults.defaultBlendState.color.dstFactor = wgpu::BlendFactor::OneMinusSrcAlpha;
+    pipelineDefaults.defaultBlendState.color.operation = wgpu::BlendOperation::Add;
+    pipelineDefaults.defaultBlendState.alpha.srcFactor = wgpu::BlendFactor::Zero;
+    pipelineDefaults.defaultBlendState.alpha.dstFactor = wgpu::BlendFactor::One;
+    pipelineDefaults.defaultBlendState.alpha.operation = wgpu::BlendOperation::Add;
 
-    // Create the render pipeline
-    wgpu::RenderPipelineDescriptor pipelineDesc{};
-    pipelineDesc.nextInChain = nullptr;
+    pipelineDefaults.defaultColorTarget = {};
+    pipelineDefaults.defaultColorTarget.format = surfaceFormat;
+    pipelineDefaults.defaultColorTarget.blend = &pipelineDefaults.defaultBlendState;
+    pipelineDefaults.defaultColorTarget.writeMask = WGPUColorWriteMask_All;
 
-    // Configure the vertex pipeline
-    // We use one vertex buffer
-    wgpu::VertexBufferLayout vertexBufferLayout{};
-    // We now have 2 attributes
-    std::vector<wgpu::VertexAttribute> vertexAttribs(2);
+    pipelineDefaults.depthTextureFormat = wgpu::TextureFormat::Depth24Plus;
 
-    // Describe the position attribute
-    vertexAttribs[0].shaderLocation = 0; // @location(0)
-    vertexAttribs[0].format = wgpu::VertexFormat::Float32x3;
-    vertexAttribs[0].offset = 0;
+    pipelineDefaults.defaultDepthStencilState = wgpu::Default;
+    pipelineDefaults.defaultDepthStencilState.depthCompare = wgpu::CompareFunction::Less;
+    pipelineDefaults.defaultDepthStencilState.depthWriteEnabled = true;
+    pipelineDefaults.defaultDepthStencilState.format = pipelineDefaults.depthTextureFormat;
+    pipelineDefaults.defaultDepthStencilState.stencilReadMask = 0;
+    pipelineDefaults.defaultDepthStencilState.stencilWriteMask = 0;
 
-    // Describe the color attribute
-    vertexAttribs[1].shaderLocation = 1; // @location(1)
-    vertexAttribs[1].format = wgpu::VertexFormat::Float32x3;
-    vertexAttribs[1].offset = 3 * sizeof(float);
+    pipelineDefaults.depthTextureDesc = {};
+    pipelineDefaults.depthTextureDesc.nextInChain = nullptr;
+    pipelineDefaults.depthTextureDesc.label = nullptr;
+    pipelineDefaults.depthTextureDesc.dimension = wgpu::TextureDimension::_2D;
+    pipelineDefaults.depthTextureDesc.format = pipelineDefaults.depthTextureFormat;
+    pipelineDefaults.depthTextureDesc.mipLevelCount = 1;
+    pipelineDefaults.depthTextureDesc.sampleCount = 1;
+    pipelineDefaults.depthTextureDesc.size = {640, 480, 1};
+    pipelineDefaults.depthTextureDesc.usage = wgpu::TextureUsage::RenderAttachment;
+    pipelineDefaults.depthTextureDesc.viewFormatCount = 1;
+    pipelineDefaults.depthTextureDesc.viewFormats = (WGPUTextureFormat *)&pipelineDefaults.depthTextureFormat;
+    pipelineDefaults.depthTexture = wgpuDeviceCreateTexture(device, &pipelineDefaults.depthTextureDesc);
 
-    vertexBufferLayout.attributeCount = static_cast<uint32_t>(vertexAttribs.size());
-    vertexBufferLayout.attributes = vertexAttribs.data();
+    pipelineDefaults.depthTextureViewDesc = {};
+    pipelineDefaults.depthTextureViewDesc.aspect = wgpu::TextureAspect::DepthOnly;
+    pipelineDefaults.depthTextureViewDesc.baseArrayLayer = 0;
+    pipelineDefaults.depthTextureViewDesc.arrayLayerCount = 1;
+    pipelineDefaults.depthTextureViewDesc.baseMipLevel = 0;
+    pipelineDefaults.depthTextureViewDesc.mipLevelCount = 1;
+    pipelineDefaults.depthTextureViewDesc.dimension = wgpu::TextureViewDimension::_2D;
+    pipelineDefaults.depthTextureViewDesc.format = pipelineDefaults.depthTextureFormat;
+    pipelineDefaults.depthTextureView = wgpuTextureCreateView(pipelineDefaults.depthTexture, &pipelineDefaults.depthTextureViewDesc);
 
-    vertexBufferLayout.arrayStride = 6 * sizeof(float);
+    pipelineDefaults.defaultBindingLayout = wgpu::Default;
+    pipelineDefaults.defaultBindingLayout.binding = 0;
+    pipelineDefaults.defaultBindingLayout.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+    pipelineDefaults.defaultBindingLayout.buffer.type = wgpu::BufferBindingType::Uniform;
+    pipelineDefaults.defaultBindingLayout.buffer.minBindingSize = sizeof(Uniforms);
 
-    vertexBufferLayout.stepMode = wgpu::VertexStepMode::Vertex;
+    pipelineDefaults.defaultBindGroupLayoutDesc = {};
+    pipelineDefaults.defaultBindGroupLayoutDesc.nextInChain = nullptr;
+    pipelineDefaults.defaultBindGroupLayoutDesc.entryCount = 1;
+    pipelineDefaults.defaultBindGroupLayoutDesc.entries = &pipelineDefaults.defaultBindingLayout;
+    pipelineDefaults.defaultBindGroupLayout = wgpuDeviceCreateBindGroupLayout(device, &pipelineDefaults.defaultBindGroupLayoutDesc);
 
-    pipelineDesc.vertex.bufferCount = 1;
-    pipelineDesc.vertex.buffers = &vertexBufferLayout;
-
-    // NB: We define the 'shaderModule' in the second part of this chapter.
-    // Here we tell that the programmable vertex shader stage is described
-    // by the function called 'vs_main' in that module.
-    pipelineDesc.vertex.module = shaderModule;
-    pipelineDesc.vertex.entryPoint = "vs_main";
-    pipelineDesc.vertex.constantCount = 0;
-    pipelineDesc.vertex.constants = nullptr;
-
-    // Each sequence of 3 vertices is considered as a triangle
-    pipelineDesc.primitive.topology = wgpu::PrimitiveTopology::TriangleList;
-
-    // We'll see later how to specify the order in which vertices should be
-    // connected. When not specified, vertices are considered sequentially.
-    pipelineDesc.primitive.stripIndexFormat = wgpu::IndexFormat::Undefined;
-
-    // The face orientation is defined by assuming that when looking
-    // from the front of the face, its corner vertices are enumerated
-    // in the counter-clockwise (CCW) order.
-    pipelineDesc.primitive.frontFace = wgpu::FrontFace::CCW;
-
-    // But the face orientation does not matter much because we do not
-    // cull (i.e. "hide") the faces pointing away from us (which is often
-    // used for optimization).
-    pipelineDesc.primitive.cullMode = wgpu::CullMode::None;
-
-    // We tell that the programmable fragment shader stage is described
-    // by the function called 'fs_main' in the shader module.
-    wgpu::FragmentState fragmentState{};
-    fragmentState.module = shaderModule;
-    fragmentState.entryPoint = "fs_main";
-    fragmentState.constantCount = 0;
-    fragmentState.constants = nullptr;
-
-    wgpu::BlendState blendState{};
-    blendState.color.srcFactor = wgpu::BlendFactor::SrcAlpha;
-    blendState.color.dstFactor = wgpu::BlendFactor::OneMinusSrcAlpha;
-    blendState.color.operation = wgpu::BlendOperation::Add;
-    blendState.alpha.srcFactor = wgpu::BlendFactor::Zero;
-    blendState.alpha.dstFactor = wgpu::BlendFactor::One;
-    blendState.alpha.operation = wgpu::BlendOperation::Add;
-
-    wgpu::ColorTargetState colorTarget{};
-    colorTarget.format = surfaceFormat;
-    colorTarget.blend = &blendState;
-    colorTarget.writeMask = WGPUColorWriteMask_All; // We could write to only some of the color channels.
-
-    // We have only one target because our render pass has only one output color
-    // attachment.
-    fragmentState.targetCount = 1;
-    fragmentState.targets = &colorTarget;
-    pipelineDesc.fragment = &fragmentState;
-
-    wgpu::TextureFormat depthTextureFormat = wgpu::TextureFormat::Depth24Plus;
-
-    wgpu::DepthStencilState depthStencilState = wgpu::Default;
-    depthStencilState.depthCompare = wgpu::CompareFunction::Less;
-    depthStencilState.depthWriteEnabled = true;
-    depthStencilState.format = depthTextureFormat;
-    depthStencilState.stencilReadMask = 0;
-    depthStencilState.stencilWriteMask = 0;
-
-    pipelineDesc.depthStencil = &depthStencilState;
-
-    wgpu::TextureDescriptor depthTextureDesc = {};
-    depthTextureDesc.nextInChain = nullptr;
-    depthTextureDesc.label = nullptr;
-    depthTextureDesc.dimension = wgpu::TextureDimension::_2D;
-    depthTextureDesc.format = depthTextureFormat;
-    depthTextureDesc.mipLevelCount = 1;
-    depthTextureDesc.sampleCount = 1;
-    depthTextureDesc.size = {640, 480, 1};
-    depthTextureDesc.usage = wgpu::TextureUsage::RenderAttachment;
-    depthTextureDesc.viewFormatCount = 1;
-    depthTextureDesc.viewFormats = (WGPUTextureFormat *)&depthTextureFormat;
-    depthTexture = wgpuDeviceCreateTexture(device, &depthTextureDesc);
-
-    wgpu::TextureViewDescriptor depthTextureViewDesc = {};
-    depthTextureViewDesc.aspect = wgpu::TextureAspect::DepthOnly;
-    depthTextureViewDesc.baseArrayLayer = 0;
-    depthTextureViewDesc.arrayLayerCount = 1;
-    depthTextureViewDesc.baseMipLevel = 0;
-    depthTextureViewDesc.mipLevelCount = 1;
-    depthTextureViewDesc.dimension = wgpu::TextureViewDimension::_2D;
-    depthTextureViewDesc.format = depthTextureFormat;
-    depthTextureView = wgpuTextureCreateView(depthTexture, &depthTextureViewDesc);
-
-    // Samples per pixel
-    pipelineDesc.multisample.count = 1;
-
-    // Default value for the mask, meaning "all bits on"
-    pipelineDesc.multisample.mask = ~0u;
-
-    // Default value as well (irrelevant for count = 1 anyways)
-    pipelineDesc.multisample.alphaToCoverageEnabled = false;
-
-    // Define binding layout
-    wgpu::BindGroupLayoutEntry bindingLayout = wgpu::Default;
-    // The binding index as used in the @binding attribute in the shader
-    bindingLayout.binding = 0;
-    // The stage that needs to access this resource
-    bindingLayout.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
-    //                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ This changed
-    bindingLayout.buffer.type = wgpu::BufferBindingType::Uniform;
-    bindingLayout.buffer.minBindingSize = sizeof(MyUniforms);
-    //                                    ^^^^^^^^^^^^^^^^^^ This was 4 * sizeof(float)
-
-    // Create a bind group layout
-    wgpu::BindGroupLayoutDescriptor bindGroupLayoutDesc{};
-    bindGroupLayoutDesc.nextInChain = nullptr;
-    bindGroupLayoutDesc.entryCount = 1;
-    bindGroupLayoutDesc.entries = &bindingLayout;
-    bindGroupLayout = wgpuDeviceCreateBindGroupLayout(device, &bindGroupLayoutDesc);
-
-    // Create the pipeline layout
-    wgpu::PipelineLayoutDescriptor layoutDesc{};
-    layoutDesc.nextInChain = nullptr;
-    layoutDesc.bindGroupLayoutCount = 1;
-    layoutDesc.bindGroupLayouts = (WGPUBindGroupLayout *)&bindGroupLayout;
-    layout = wgpuDeviceCreatePipelineLayout(device, &layoutDesc);
-
-    // Assign the PipelineLayout to the RenderPipelineDescriptor's layout field
-    pipelineDesc.layout = layout;
-
-    pipeline = wgpuDeviceCreateRenderPipeline(device, &pipelineDesc);
-
-    // We no longer need to access the shader module
-    wgpuShaderModuleRelease(shaderModule);
+    pipelineDefaults.defaultPipelineLayoutDescriptor = {};
+    pipelineDefaults.defaultPipelineLayoutDescriptor.nextInChain = nullptr;
+    pipelineDefaults.defaultPipelineLayoutDescriptor.bindGroupLayoutCount = 1;
+    pipelineDefaults.defaultPipelineLayoutDescriptor.bindGroupLayouts = (WGPUBindGroupLayout *)&pipelineDefaults.defaultBindGroupLayout;
+    pipelineDefaults.defaultLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineDefaults.defaultPipelineLayoutDescriptor);
 }
 
 void Renderer::InitializeBuffers()
@@ -549,13 +477,8 @@ void Renderer::InitializeBuffers()
 
     wgpuQueueWriteBuffer(queue, indexBuffer, 0, indexData.data(), bufferDesc.size);
 
-    // Create uniform buffer (reusing bufferDesc from other buffer creations)
-    // The buffer will only contain 1 float with the value of uTime
-    // then 3 floats left empty but needed by alignment constraints
-    bufferDesc.size = sizeof(MyUniforms);
-    //                ^^^^^^^^^^^^^^^^^^ This was 4 * sizeof(float)
+    bufferDesc.size = sizeof(Uniforms);
 
-    // Make sure to flag the buffer as BufferUsage::Uniform
     bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform;
 
     bufferDesc.mappedAtCreation = false;
@@ -595,7 +518,7 @@ void Renderer::InitializeBuffers()
 
     uniforms.time = 1.0f;
     uniforms.color = {0.0f, 1.0f, 0.4f, 1.0f};
-    wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &uniforms, sizeof(MyUniforms));
+    wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &uniforms, sizeof(Uniforms));
 }
 
 void Renderer::InitializeBindGroups()
@@ -611,27 +534,101 @@ void Renderer::InitializeBindGroups()
     // multiple uniform blocks.
     binding.offset = 0;
     // And we specify again the size of the buffer.
-    binding.size = sizeof(MyUniforms);
+    binding.size = sizeof(Uniforms);
     //             ^^^^^^^^^^^^^^^^^^ This was 4 * sizeof(float)
 
     // A bind group contains one or multiple bindings
     wgpu::BindGroupDescriptor bindGroupDesc{};
     bindGroupDesc.nextInChain = nullptr;
-    bindGroupDesc.layout = bindGroupLayout;
+    bindGroupDesc.layout = pipelineDefaults.defaultBindGroupLayout;
     // There must be as many bindings as declared in the layout!
     bindGroupDesc.entryCount = 1;
     bindGroupDesc.entries = &binding;
     bindGroup = wgpuDeviceCreateBindGroup(device, &bindGroupDesc);
 }
 
-// void Renderer::updateUniforms()
-// {
-//     wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &uniforms, sizeof(uniforms));
-// }
+void Renderer::draw(Material material)
+{
+    wgpu::ShaderModule shaderModule = createShaderModule(material);
+    createPipeline(shaderModule);
+}
 
-// void Renderer::updateBuffers()
-// {
-//     indexCount = static_cast<uint32_t>(indices.size());
-//     wgpuQueueWriteBuffer(queue, pointBuffer, 0, vertices.data(), vertices.size());
-//     wgpuQueueWriteBuffer(queue, indexBuffer, 0, indices.data(), indices.size());
-// }
+wgpu::ShaderModule Renderer::createShaderModule(Material material)
+{
+    std::ifstream file(material.shaderPath);
+    if (!file.is_open())
+    {
+        return nullptr;
+    }
+    file.seekg(0, std::ios::end);
+    size_t size = file.tellg();
+    std::string shaderSource(size, ' ');
+    file.seekg(0);
+    file.read(shaderSource.data(), size);
+
+    WGPUShaderModuleWGSLDescriptor shaderCodeDesc{};
+    shaderCodeDesc.chain.next = nullptr;
+    shaderCodeDesc.chain.sType = WGPUSType_ShaderModuleWGSLDescriptor;
+    shaderCodeDesc.code = shaderSource.c_str();
+
+    WGPUShaderModuleDescriptor shaderDesc{};
+#ifdef WEBGPU_BACKEND_WGPU
+    shaderDesc.hintCount = 0;
+    shaderDesc.hints = nullptr;
+#endif
+    shaderDesc.nextInChain = &shaderCodeDesc.chain;
+    return wgpuDeviceCreateShaderModule(device, &shaderDesc);
+}
+
+void Renderer::createPipeline(wgpu::ShaderModule shaderModule)
+{
+    wgpu::RenderPipelineDescriptor pipelineDesc{};
+    pipelineDesc.nextInChain = nullptr;
+
+    wgpu::VertexBufferLayout vertexBufferLayout{};
+
+    std::vector<wgpu::VertexAttribute> vertexAttribs(1);
+
+    vertexAttribs[0].shaderLocation = 0;
+    vertexAttribs[0].format = wgpu::VertexFormat::Float32x3;
+    vertexAttribs[0].offset = 0;
+
+    vertexBufferLayout.attributeCount = static_cast<uint32_t>(vertexAttribs.size());
+    vertexBufferLayout.attributes = vertexAttribs.data();
+    vertexBufferLayout.arrayStride = 3 * sizeof(float);
+    vertexBufferLayout.stepMode = wgpu::VertexStepMode::Vertex;
+
+    pipelineDesc.vertex.bufferCount = 1;
+    pipelineDesc.vertex.buffers = &vertexBufferLayout;
+    pipelineDesc.vertex.module = shaderModule;
+    pipelineDesc.vertex.entryPoint = "vs_main";
+    pipelineDesc.vertex.constantCount = 0;
+    pipelineDesc.vertex.constants = nullptr;
+
+    pipelineDesc.primitive.topology = wgpu::PrimitiveTopology::TriangleList;
+    pipelineDesc.primitive.stripIndexFormat = wgpu::IndexFormat::Undefined;
+    pipelineDesc.primitive.frontFace = wgpu::FrontFace::CCW;
+    pipelineDesc.primitive.cullMode = wgpu::CullMode::None;
+
+    wgpu::FragmentState fragmentState{};
+    fragmentState.module = shaderModule;
+    fragmentState.entryPoint = "fs_main";
+    fragmentState.constantCount = 0;
+    fragmentState.constants = nullptr;
+    fragmentState.targetCount = 1;
+    fragmentState.targets = &pipelineDefaults.defaultColorTarget;
+
+    pipelineDesc.fragment = &fragmentState;
+
+    pipelineDesc.depthStencil = &pipelineDefaults.defaultDepthStencilState;
+
+    pipelineDesc.multisample.count = 1;
+    pipelineDesc.multisample.mask = ~0u;
+    pipelineDesc.multisample.alphaToCoverageEnabled = false;
+
+    pipelineDesc.layout = pipelineDefaults.defaultLayout;
+
+    pipeline = wgpuDeviceCreateRenderPipeline(device, &pipelineDesc);
+
+    wgpuShaderModuleRelease(shaderModule);
+}

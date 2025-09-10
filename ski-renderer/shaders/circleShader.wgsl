@@ -1,3 +1,9 @@
+fn circle(vec2f p, float r, vec2f uv) -> float
+{
+    float d = distance(p, uv);
+    return d;
+}
+
 struct VertexInput {
 	@location(0) position: vec3f,
 };
@@ -22,15 +28,21 @@ const pi = 3.14159265359;
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 	var out: VertexOutput;
-	out.position = uUniforms.projectionMatrix * uUniforms.viewMatrix * uUniforms.modelMatrix * vec4f(in.position, 1.0);
-	out.color = uUniforms.color.rgb;
+	out.position = uMyUniforms.projectionMatrix * uMyUniforms.viewMatrix * uMyUniforms.modelMatrix * vec4f(in.position, 1.0);
+	out.color = in.color;
 	return out;
 }
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
-	let color = in.color;
-	// Gamma-correction
-	let corrected_color = pow(color, vec3f(2.2));
-	return vec4f(corrected_color, uUniforms.color.a);
+	vec4f uv = in.position;
+    float dist = circle(vec2(0.5, 0.5), 0.5, uv);
+    vec3 white = vec3f(1.0, 1.0, 1.0);
+
+    float tp = 0.5;
+    float f = 0.005;
+    
+    vec3 col = smoothstep(tp - f, tp + f, dist) *  white;
+
+    return vec4(col,1.0);
 }
