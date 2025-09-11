@@ -79,7 +79,11 @@ int main()
 #else  // __EMSCRIPTEN__
 	while (renderer.IsRunning())
 	{
-		renderer.MainLoop();
+		renderer.beginFrame();
+		//renderer.MainLoop();
+		renderer.draw({"shaders/circleShader.wgsl", "models/square.txt", {}});
+		renderer.draw({"shaders/shader.wgsl", "models/square.txt", {}});
+		renderer.endFrame();
 	}
 #endif // __EMSCRIPTEN__
 

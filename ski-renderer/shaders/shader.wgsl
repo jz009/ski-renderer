@@ -22,7 +22,8 @@ const pi = 3.14159265359;
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
 	var out: VertexOutput;
-	out.position = uUniforms.projectionMatrix * uUniforms.viewMatrix * uUniforms.modelMatrix * vec4f(in.position, 1.0);
+	//out.position = uUniforms.projectionMatrix * uUniforms.viewMatrix * uUniforms.modelMatrix * vec4f(in.position, 1.0);
+	out.position =  uUniforms.modelMatrix * vec4f(in.position, 1.0);
 	out.color = uUniforms.color.rgb;
 	return out;
 }
