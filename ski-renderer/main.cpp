@@ -41,7 +41,7 @@ int main()
 	Renderer renderer;
 	// Engine engine = Engine::Initialize(renderer);
 
-	if (!renderer.Initialize())
+	if (!renderer.initialize())
 	{
 		return 1;
 	}
@@ -59,7 +59,7 @@ int main()
 	};
 	emscripten_set_main_loop_arg(callback, &renderer, 0, true);
 #else  // __EMSCRIPTEN__
-	while (renderer.IsRunning())
+	while (renderer.isRunning())
 	{
 		
 		renderer.beginFrame();
@@ -73,7 +73,7 @@ int main()
 	}
 #endif // __EMSCRIPTEN__
 
-	renderer.Terminate();
+	renderer.terminate();
 
 	return 0;
 }

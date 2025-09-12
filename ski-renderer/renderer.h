@@ -55,13 +55,13 @@ struct Renderer
 public:
     // Initialize everything and return true if it went all right
     bool
-    Initialize();
+    initialize();
 
     // Uninitialize everything that was initialized
-    void Terminate();
+    void terminate();
 
     // Return true as long as the main loop should keep on running
-    bool IsRunning();
+    bool isRunning();
 
     void draw(const Model &model);
     void endFrame();
@@ -69,11 +69,11 @@ public:
     Model createModel(const std::filesystem::path& geometry, const std::filesystem::path& shader, const Uniforms& uniforms);
     Uniforms getDefaultUniforms();
 
-    private : wgpu::TextureView GetNextSurfaceTextureView();
+    private : wgpu::TextureView getNextSurfaceTextureView();
     void createRenderPass();
 
-    // Substep of Initialize() that creates the render pipeline
-    void InitializePipelineDefaults();
+    // Substep of initialize() that creates the render pipeline
+    void initializePipelineDefaults();
     void writeUniformBuffer(const Material& material);
     void InitializeBindGroups();
     void updateUniforms();
@@ -110,7 +110,7 @@ public:
 
 };
 
-bool Renderer::Initialize()
+bool Renderer::initialize()
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -167,11 +167,11 @@ bool Renderer::Initialize()
 
     wgpuInstanceRelease(instance);
     wgpuAdapterRelease(adapter);
-    InitializePipelineDefaults();
+    initializePipelineDefaults();
     return true;
 }
 
-void Renderer::Terminate()
+void Renderer::terminate()
 {
     wgpuBindGroupRelease(bindGroup);
     wgpuPipelineLayoutRelease(pipelineDefaults.defaultLayout);
@@ -224,12 +224,12 @@ void Renderer::createRenderPass()
     renderPass = encoder.beginRenderPass(renderPassDesc);
 }
 
-bool Renderer::IsRunning()
+bool Renderer::isRunning()
 {
     return !glfwWindowShouldClose(window);
 }
 
-wgpu::TextureView Renderer::GetNextSurfaceTextureView()
+wgpu::TextureView Renderer::getNextSurfaceTextureView()
 {
     // Get the surface texture
     wgpu::SurfaceTexture surfaceTexture;
@@ -261,7 +261,7 @@ wgpu::TextureView Renderer::GetNextSurfaceTextureView()
     return targetView;
 }
 
-void Renderer::InitializePipelineDefaults()
+void Renderer::initializePipelineDefaults()
 {
     pipelineDefaults = {};
 
@@ -472,7 +472,7 @@ void Renderer::draw(const Model& model)
 void Renderer::beginFrame()
 {
     glfwPollEvents();
-    targetView = GetNextSurfaceTextureView();
+    targetView = getNextSurfaceTextureView();
     encoder = device.createCommandEncoder();
     createRenderPass();
 }

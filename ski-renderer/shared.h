@@ -20,7 +20,7 @@ struct VertexAttributes
 
 struct Material
 {
-    std::string shaderPath;
+    std::filesystem::path shaderPath;
     Uniforms uniforms;
 };
 
