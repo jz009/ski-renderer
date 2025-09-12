@@ -1,3 +1,4 @@
+#pragma once
 #include "utils/wgpu-utils.h"
 #include "utils/ResourceManager.h"
 #include "utils/glfw3webgpu.h"
@@ -25,41 +26,18 @@
 #include <vector>
 #include <array>
 #include "renderer.h"
-
-
+#include "shared.h"
 
 struct Engine
 {
 public:
 	// Initialize everything and return true if it went all right
 	static Engine Initialize(Renderer r);
-
-
-	std::vector<Vertex> vertices;
-	std::vector<uint16_t> indices;
-
-	// void createCircle(float radius, float posX, float posY)
-	// {
-	// 	int segments = 16;
-	// 	float angle_step = 2 * PI / segments;
-
-	// 	auto i = {0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 5, 0, 5, 6, 0, 6, 7, 0, 7, 8, 0, 8, 9, 0, 9, 10, 0, 10, 11};
-	// 	indices.insert(indices.end(), i.begin(), i.end());
-	// 	vertices.push_back({posX, posY, 0.0f});
-	// 	for (int i = 0; i < segments; ++i)
-	// 	{
-	// 		float angle = i * angle_step;
-	// 		vertices.push_back({radius * cos(angle),
-	// 							radius * sin(angle),
-	// 							0.0f});
-	// 	}
-	// }
-
 };
 
 int main()
 {
-	Engine engine;
+	// Engine engine;
 	Renderer renderer;
 	// Engine engine = Engine::Initialize(renderer);
 
@@ -67,6 +45,9 @@ int main()
 	{
 		return 1;
 	}
+
+	Model MvertexData = renderer.loadGeometryFromObj("models/mammoth.obj");
+	Model PvertexData = renderer.loadGeometryFromObj("models/pyramid.obj");
 
 #ifdef __EMSCRIPTEN__
 	// Equivalent of the main loop when using Emscripten:
@@ -79,10 +60,15 @@ int main()
 #else  // __EMSCRIPTEN__
 	while (renderer.IsRunning())
 	{
+		
 		renderer.beginFrame();
-		//renderer.MainLoop();
-		renderer.draw({"shaders/circleShader.wgsl", "models/square.txt", {}});
-		renderer.draw({"shaders/shader.wgsl", "models/square.txt", {}});
+		// renderer.MainLoop();
+		//  renderer.draw({"shaders/circleShader.wgsl", "models/square.txt", {}});
+		Uniforms u = renderer.getDefaultUniforms();
+		MvertexData.material = {"shaders/shader.wgsl", u};
+		PvertexData.material = {"shaders/shader.wgsl", u};
+		renderer.draw(MvertexData);
+		//renderer.draw(PvertexData);
 		renderer.endFrame();
 	}
 #endif // __EMSCRIPTEN__

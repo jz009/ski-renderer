@@ -1,0 +1,31 @@
+#pragma once
+#include "renderer.h"
+
+struct Uniforms
+{
+    glm::mat4x4 projectionMatrix;
+    glm::mat4x4 viewMatrix;
+    glm::mat4x4 modelMatrix;
+    std::array<float, 4> color;
+    float time;
+    float _pad[3];
+};
+
+struct VertexAttributes
+{
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec3 color;
+};
+
+struct Material
+{
+    std::string shaderPath;
+    Uniforms uniforms;
+};
+
+struct Model {
+    wgpu::Buffer buffer;
+    uint32_t vertexCount;
+    Material material;
+};

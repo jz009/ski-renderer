@@ -1,3 +1,4 @@
+#pragma once
 #include "utils/wgpu-utils.h"
 #include "utils/ResourceManager.h"
 #include "utils/glfw3webgpu.h"
@@ -12,6 +13,8 @@
 #include <fstream>
 #include <sstream>
 #include <optional>
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
 
 #include <webgpu/webgpu.hpp>
 
@@ -27,30 +30,7 @@
 #include <array>
 #include <corecrt_math_defines.h>
 #include <unordered_map>
-
-struct Vertex
-{
-    float x;
-    float y;
-    float z;
-};
-
-struct Uniforms
-{
-    glm::mat4x4 projectionMatrix;
-    glm::mat4x4 viewMatrix;
-    glm::mat4x4 modelMatrix;
-    std::array<float, 4> color;
-    float time;
-    float _pad[3];
-};
-
-struct Material
-{
-    std::string shaderPath;
-    std::string geomPath;
-    Uniforms uniforms;
-};
+#include "shared.h"
 
 struct Renderer
 {
@@ -80,23 +60,21 @@ public:
     // Uninitialize everything that was initialized
     void Terminate();
 
-    // Draw a frame and handle events
-    void MainLoop();
-
     // Return true as long as the main loop should keep on running
     bool IsRunning();
 
-    void draw(Material material);
+    void draw(const Model &model);
     void endFrame();
     void beginFrame();
+    Model loadGeometryFromObj(const std::filesystem::path &path);
+    Uniforms getDefaultUniforms();
 
-private:
-    wgpu::TextureView GetNextSurfaceTextureView();
-    wgpu::RenderPassEncoder createRenderPass(wgpu::CommandEncoder encoder);
+    private : wgpu::TextureView GetNextSurfaceTextureView();
+    void createRenderPass();
 
     // Substep of Initialize() that creates the render pipeline
     void InitializePipelineDefaults();
-    void InitializeBuffers(std::string path);
+    void writeUniformBuffer(const Material& material);
     void InitializeBindGroups();
     void updateUniforms();
 
@@ -114,25 +92,19 @@ private:
     wgpu::RenderPipeline pipeline;
     wgpu::Buffer pointBuffer;
     wgpu::Buffer indexBuffer;
-    uint32_t indexCount;
     wgpu::Buffer uniformBuffer;
     wgpu::TextureView targetView;
 
     wgpu::BindGroup bindGroup;
 
-    Uniforms uniforms;
+    wgpu::RenderPassEncoder renderPass;
+    wgpu::CommandEncoder encoder;
 
-    std::optional<wgpu::RenderPassEncoder> frameRenderPass;
-    wgpu::CommandEncoder frameEncoder;
-
-    std::unordered_map<std::string, wgpu::ShaderModule>
-        shaderMap;
-    std::unordered_map<std::string, wgpu::RenderPipeline> pipelineMap;
     wgpu::ShaderModule shaderModule;
 
     PipelineDefaults pipelineDefaults;
-    uint32_t WIDTH = 480;
-    uint32_t HEIGHT = 640;
+    uint32_t WIDTH = 750;
+    uint32_t HEIGHT = 1200;
 
     // std::vector<Vertex> vertices;
     // std::vector<uint16_t> indices;
@@ -215,7 +187,6 @@ void Renderer::Terminate()
     wgpuBindGroupRelease(bindGroup);
     wgpuPipelineLayoutRelease(pipelineDefaults.defaultLayout);
     wgpuBindGroupLayoutRelease(pipelineDefaults.defaultBindGroupLayout);
-    wgpuBufferRelease(uniformBuffer);
     wgpuBufferRelease(pointBuffer);
     wgpuBufferRelease(indexBuffer);
     wgpuTextureViewRelease(pipelineDefaults.depthTextureView);
@@ -230,118 +201,7 @@ void Renderer::Terminate()
     glfwTerminate();
 }
 
-void Renderer::MainLoop()
-{
-//     glfwPollEvents();
-
-//     Material material = {"shaders/shader.wgsl", uniforms};
-//     createShaderModule(material);
-//     createPipeline();
-
-//     // Update uniform buffer
-//     float time = static_cast<float>(glfwGetTime());
-//     // Only update the 1-st float of the buffer
-//     wgpuQueueWriteBuffer(queue, uniformBuffer, offsetof(Uniforms, time), &time, sizeof(float));
-
-//     // Get the next target texture view
-//     targetView = GetNextSurfaceTextureView();
-//     if (!targetView)
-//         return;
-
-//     // Create a command encoder for the draw call
-//     wgpu::CommandEncoderDescriptor encoderDesc = {};
-//     encoderDesc.nextInChain = nullptr;
-//     encoderDesc.label = "My command encoder";
-//     wgpu::CommandEncoder encoder = wgpuDeviceCreateCommandEncoder(device, &encoderDesc);
-
-//     // Create the render pass that clears the screen with our color
-//     wgpu::RenderPassDescriptor renderPassDesc = {};
-//     renderPassDesc.nextInChain = nullptr;
-
-//     // The attachment part of the render pass descriptor describes the target texture of the pass
-//     wgpu::RenderPassColorAttachment renderPassColorAttachment = {};
-//     renderPassColorAttachment.view = targetView;
-//     renderPassColorAttachment.resolveTarget = nullptr;
-//     renderPassColorAttachment.loadOp = wgpu::LoadOp::Clear;
-//     renderPassColorAttachment.storeOp = wgpu::StoreOp::Store;
-//     renderPassColorAttachment.clearValue = wgpu::Color{0.05, 0.05, 0.05, 1.0};
-// #ifndef WEBGPU_BACKEND_WGPU
-//     renderPassColorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-// #endif
-
-//     wgpu::RenderPassDepthStencilAttachment depthStencilAttachment = {};
-//     depthStencilAttachment.view = pipelineDefaults.depthTextureView;
-//     depthStencilAttachment.depthClearValue = 1.0f;
-//     depthStencilAttachment.depthLoadOp = wgpu::LoadOp::Clear;
-//     depthStencilAttachment.depthStoreOp = wgpu::StoreOp::Store;
-//     depthStencilAttachment.depthReadOnly = false;
-//     depthStencilAttachment.stencilClearValue = 0;
-//     depthStencilAttachment.stencilLoadOp = wgpu::LoadOp::Undefined;
-//     depthStencilAttachment.stencilStoreOp = wgpu::StoreOp::Undefined;
-//     depthStencilAttachment.stencilReadOnly = true;
-
-//     renderPassDesc.colorAttachmentCount = 1;
-//     renderPassDesc.colorAttachments = &renderPassColorAttachment;
-//     renderPassDesc.depthStencilAttachment = &depthStencilAttachment;
-//     renderPassDesc.timestampWrites = nullptr;
-
-//     wgpu::RenderPassEncoder renderPass = wgpuCommandEncoderBeginRenderPass(encoder, &renderPassDesc);
-
-//     // Select which render pipeline to use
-//     wgpuRenderPassEncoderSetPipeline(renderPass, pipeline);
-
-//     // Set vertex buffer while encoding the render pass
-//     wgpuRenderPassEncoderSetVertexBuffer(renderPass, 0, pointBuffer, 0, wgpuBufferGetSize(pointBuffer));
-
-//     // The second argument must correspond to the choice of uint16_t or uint32_t
-//     // we've done when creating the index buffer.
-//     wgpuRenderPassEncoderSetIndexBuffer(renderPass, indexBuffer, wgpu::IndexFormat::Uint16, 0, wgpuBufferGetSize(indexBuffer));
-
-//     // Set binding group here!
-//     wgpuRenderPassEncoderSetBindGroup(renderPass, 0, bindGroup, 0, nullptr);
-
-//     uniforms.time = static_cast<float>(glfwGetTime());
-//     // Only update the 1st float of the buffer
-//     wgpuQueueWriteBuffer(queue, uniformBuffer, offsetof(Uniforms, time), &uniforms.time, sizeof(Uniforms::time));
-//     float angle1 = uniforms.time;
-//     glm::mat4x4 scale = glm::scale(glm::mat4x4(1.0), glm::vec3(0.3f));
-//     glm::mat4x4 transpose = glm::translate(glm::mat4x4(1.0), glm::vec3(0.5, 0.0, 0.0));
-//     glm::mat4x4 rotation = glm::rotate(glm::mat4x4(1.0), angle1, glm::vec3(0.0, 0.0, 1.0));
-//     uniforms.modelMatrix = rotation * transpose * scale;
-//     wgpuQueueWriteBuffer(queue, uniformBuffer, offsetof(Uniforms, modelMatrix), &uniforms.modelMatrix, sizeof(Uniforms::modelMatrix));
-//     // updateUniforms();
-
-//     // Replace `draw()` with `drawIndexed()` and `vertexCount` with `indexCount`
-//     // The extra argument is an offset within the index buffer.
-//     wgpuRenderPassEncoderDrawIndexed(renderPass, indexCount, 1, 0, 0, 0);
-
-//     wgpuRenderPassEncoderEnd(renderPass);
-//     wgpuRenderPassEncoderRelease(renderPass);
-
-//     // Encode and submit the render pass
-//     wgpu::CommandBufferDescriptor cmdBufferDescriptor = {};
-//     cmdBufferDescriptor.nextInChain = nullptr;
-//     cmdBufferDescriptor.label = "Command buffer";
-//     wgpu::CommandBuffer command = wgpuCommandEncoderFinish(encoder, &cmdBufferDescriptor);
-//     wgpuCommandEncoderRelease(encoder);
-
-//     wgpuQueueSubmit(queue, 1, (WGPUCommandBuffer *)&command);
-//     wgpuCommandBufferRelease(command);
-
-//     // At the end of the frame
-//     wgpuTextureViewRelease(targetView);
-// #ifndef __EMSCRIPTEN__
-//     wgpuSurfacePresent(surface);
-// #endif
-
-// #if defined(WEBGPU_BACKEND_DAWN)
-//     wgpuDeviceTick(device);
-// #elif defined(WEBGPU_BACKEND_WGPU)
-//     wgpuDevicePoll(device, false, nullptr);
-// #endif
-}
-
-wgpu::RenderPassEncoder Renderer::createRenderPass(wgpu::CommandEncoder encoder)
+void Renderer::createRenderPass()
 {
 
     wgpu::RenderPassColorAttachment renderPassColorAttachment = {};
@@ -372,7 +232,7 @@ wgpu::RenderPassEncoder Renderer::createRenderPass(wgpu::CommandEncoder encoder)
     renderPassDesc.depthStencilAttachment = &depthStencilAttachment;
     renderPassDesc.timestampWrites = nullptr;
 
-    return encoder.beginRenderPass(renderPassDesc);
+    renderPass = encoder.beginRenderPass(renderPassDesc);
 }
 
 bool Renderer::IsRunning()
@@ -432,8 +292,8 @@ void Renderer::InitializePipelineDefaults()
     pipelineDefaults.depthTextureFormat = wgpu::TextureFormat::Depth24Plus;
 
     pipelineDefaults.defaultDepthStencilState = wgpu::Default;
-    pipelineDefaults.defaultDepthStencilState.depthCompare = wgpu::CompareFunction::Always;
-    pipelineDefaults.defaultDepthStencilState.depthWriteEnabled = false;
+    pipelineDefaults.defaultDepthStencilState.depthCompare = wgpu::CompareFunction::Less;
+    pipelineDefaults.defaultDepthStencilState.depthWriteEnabled = true;
     pipelineDefaults.defaultDepthStencilState.format = pipelineDefaults.depthTextureFormat;
     pipelineDefaults.defaultDepthStencilState.stencilReadMask = 0;
     pipelineDefaults.defaultDepthStencilState.stencilWriteMask = 0;
@@ -480,56 +340,83 @@ void Renderer::InitializePipelineDefaults()
     pipelineDefaults.defaultLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineDefaults.defaultPipelineLayoutDescriptor);
 }
 
-void Renderer::InitializeBuffers(std::string path)
+Model Renderer::loadGeometryFromObj(const std::filesystem::path &path)
 {
-    // Define data vectors, but without filling them in
-    std::vector<float> pointData;
-    std::vector<uint16_t> indexData;
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
 
-    // Here we use the new 'loadGeometry' function:
-    bool success = ResourceManager::loadGeometry(path, pointData, indexData, 3);
+    std::string warn;
+    std::string err;
+    std::vector<VertexAttributes> vertexData;
 
-    // Check for errors
-    if (!success)
+    tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.string().c_str());
+    vertexData.clear();
+    for (const auto &shape : shapes)
     {
-        std::cerr << "Could not load geometry!" << std::endl;
-        exit(1);
+        size_t offset = vertexData.size();
+        vertexData.resize(offset + shape.mesh.indices.size());
+
+        for (size_t i = 0; i < shape.mesh.indices.size(); ++i)
+        {
+            const tinyobj::index_t &idx = shape.mesh.indices[i];
+
+            vertexData[offset + i].position = {
+                attrib.vertices[3 * idx.vertex_index + 0],
+                -attrib.vertices[3 * idx.vertex_index + 2], // Add a minus to avoid mirroring
+                attrib.vertices[3 * idx.vertex_index + 1]};
+
+            // Also apply the transform to normals!!
+            vertexData[offset + i].normal = {
+                attrib.normals[3 * idx.normal_index + 0],
+                -attrib.normals[3 * idx.normal_index + 2],
+                attrib.normals[3 * idx.normal_index + 1]};
+
+            vertexData[offset + i].color = {
+                attrib.colors[3 * idx.vertex_index + 0],
+                attrib.colors[3 * idx.vertex_index + 1],
+                attrib.colors[3 * idx.vertex_index + 2]};
+        }
     }
-
-    // We now store the index count rather than the vertex count
-    indexCount = static_cast<uint32_t>(indexData.size());
-
-    // Create point buffer
-    WGPUBufferDescriptor bufferDesc{};
-    bufferDesc.nextInChain = nullptr;
-    bufferDesc.size = pointData.size() * sizeof(float);
-    bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Vertex; // Vertex usage here!
+    wgpu::BufferDescriptor bufferDesc;
+    bufferDesc.size = vertexData.size() * sizeof(VertexAttributes);
+    bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex;
     bufferDesc.mappedAtCreation = false;
-    pointBuffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
+    wgpu::Buffer vertexBuffer = device.createBuffer(bufferDesc);
+    queue.writeBuffer(vertexBuffer, 0, vertexData.data(), bufferDesc.size);
 
-    // Upload geometry data to the buffer
-    wgpuQueueWriteBuffer(queue, pointBuffer, 0, pointData.data(), bufferDesc.size);
+    uint32_t vertexCount = static_cast<int>(vertexData.size());
+    return Model{vertexBuffer, vertexCount};
+}
 
-    // Create index buffer
-    // (we reuse the bufferDesc initialized for the pointBuffer)
-    bufferDesc.size = indexData.size() * sizeof(uint16_t);
-    bufferDesc.size = (bufferDesc.size + 3) & ~3; // round up to the next multiple of 4
-    bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index;
-    ;
-    indexBuffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
+void Renderer::writeUniformBuffer(const Material &material)
+{
+    // // Create index buffer
+    // // (we reuse the bufferDesc initialized for the pointBuffer)
+    // bufferDesc.size = indexData.size() * sizeof(uint16_t);
+    // bufferDesc.size = (bufferDesc.size + 3) & ~3; // round up to the next multiple of 4
+    // bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index;
+    // ;
+    // indexBuffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
 
-    wgpuQueueWriteBuffer(queue, indexBuffer, 0, indexData.data(), bufferDesc.size);
+    // wgpuQueueWriteBuffer(queue, indexBuffer, 0, indexData.data(), bufferDesc.size);
 
+    wgpu::BufferDescriptor bufferDesc;
     bufferDesc.size = sizeof(Uniforms);
-
     bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform;
-
     bufferDesc.mappedAtCreation = false;
     uniformBuffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
 
+    wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &material.uniforms, sizeof(Uniforms));
+}
+
+Uniforms Renderer::getDefaultUniforms() {
+    Uniforms uniforms;
+    uniforms.time = static_cast<float>(glfwGetTime());
+    uniforms.color = {0.0f, 1.0f, 0.4f, 1.0f};
     // Upload the initial value of the uniforms
     glm::vec3 focalPoint(0.0, 0.0, -2.0);
-    float angle1 = 2.0f; // arbitrary time
+    float angle1 = uniforms.time;
     float angle2 = 3.0f * (float)M_PI / 4.0f;
     float ratio = (float)WIDTH / (float)HEIGHT;
     float focalLength = 2.0;
@@ -538,7 +425,7 @@ void Renderer::InitializeBuffers(std::string path)
     glm::mat4x4 S = glm::scale(glm::mat4x4(1.0), glm::vec3(0.3f));
     glm::mat4x4 T1 = glm::translate(glm::mat4x4(1.0), glm::vec3(0.5, 0.0, 0.0));
     glm::mat4x4 R1 = glm::rotate(glm::mat4x4(1.0), angle1, glm::vec3(0.0, 0.0, 1.0));
-    uniforms.modelMatrix = S;
+    uniforms.modelMatrix = R1 * T1 * S;
 
     glm::mat4x4 R2 = glm::rotate(glm::mat4x4(1.0), -angle2, glm::vec3(1.0, 0.0, 0.0));
     glm::mat4x4 T2 = glm::translate(glm::mat4x4(1.0), -focalPoint);
@@ -551,10 +438,7 @@ void Renderer::InitializeBuffers(std::string path)
 
     float fov = 2 * glm::atan(1 / focalLength);
     uniforms.projectionMatrix = glm::perspective(fov, ratio, near, far);
-
-    uniforms.time = 1.0f;
-    uniforms.color = {0.0f, 1.0f, 0.4f, 1.0f};
-    wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &uniforms, sizeof(Uniforms));
+    return uniforms;
 }
 
 void Renderer::InitializeBindGroups()
@@ -583,74 +467,43 @@ void Renderer::InitializeBindGroups()
     bindGroup = wgpuDeviceCreateBindGroup(device, &bindGroupDesc);
 }
 
-void Renderer::draw(Material material)
+void Renderer::draw(const Model& model)
 {
-    material.uniforms = uniforms;
-    // if (shaderMap.count(material.shaderPath) == 0)
-    // {
-    //     shaderModule = shaderMap[material.shaderPath];
-    // }
-    // else
-    // {
-    //     createShaderModule(material);
-    //     shaderMap[material.shaderPath] = shaderModule;
-    // }
-    // if (pipelineMap.count(material.shaderPath) == 0)
-    // {
-    //     pipeline = pipelineMap[material.shaderPath];
-    // }
-    // else
-    // {
-    //     createPipeline();
-    //     pipelineMap[material.shaderPath] = pipeline;
-    // }
-
-    // material = {"shaders/shader.wgsl", uniforms};
-    InitializeBuffers(material.geomPath);
+    writeUniformBuffer(model.material);
     InitializeBindGroups();
-    createShaderModule(material);
+    createShaderModule(model.material);
     createPipeline();
 
-    glfwPollEvents();
-
-    wgpu::RenderPassEncoder renderPass;
-
-    if (!frameRenderPass)
-    {
-        renderPass = createRenderPass(frameEncoder);
-        frameRenderPass = renderPass;
-    }
-    else
-    {
-        renderPass = *frameRenderPass;
-    }
     renderPass.setPipeline(pipeline);
-    renderPass.setVertexBuffer(0, pointBuffer, 0, pointBuffer.getSize());
-    renderPass.setIndexBuffer(indexBuffer, wgpu::IndexFormat::Uint16, 0, indexBuffer.getSize());
+    renderPass.setVertexBuffer(0, model.buffer, 0, model.buffer.getSize());
+    // renderPass.setIndexBuffer(indexBuffer, wgpu::IndexFormat::Uint16, 0, indexBuffer.getSize());
     renderPass.setBindGroup(0, bindGroup, 0, nullptr);
-    renderPass.drawIndexed(indexCount, 1, 0, 0, 0);
+    // renderPass.drawIndexed(indexCount, 1, 0, 0, 0);
+    renderPass.draw(model.vertexCount, 1, 0, 0);
 }
 
 void Renderer::beginFrame()
 {
+    glfwPollEvents();
     targetView = GetNextSurfaceTextureView();
-    frameEncoder = device.createCommandEncoder();
+    encoder = device.createCommandEncoder();
+    createRenderPass();
 }
 
 void Renderer::endFrame()
 {
-    frameRenderPass->end();
-    frameRenderPass->release();
+    renderPass.end();
+    renderPass.release();
     wgpu::CommandBufferDescriptor cmdBufferDescriptor = {};
     cmdBufferDescriptor.nextInChain = nullptr;
     cmdBufferDescriptor.label = "Command buffer";
-    wgpu::CommandBuffer command = frameEncoder.finish(cmdBufferDescriptor);
-    frameEncoder.release();
+    wgpu::CommandBuffer command = encoder.finish(cmdBufferDescriptor);
+    encoder.release();
     queue.submit(1, &command);
     command.release();
-
     targetView.release();
-    frameRenderPass = std::nullopt;
+    uniformBuffer.release();
+
 #ifndef __EMSCRIPTEN__
     wgpuSurfacePresent(surface);
 #endif
@@ -696,15 +549,23 @@ void Renderer::createPipeline()
 
     wgpu::VertexBufferLayout vertexBufferLayout{};
 
-    std::vector<wgpu::VertexAttribute> vertexAttribs(1);
+    std::vector<wgpu::VertexAttribute> vertexAttribs(3);
 
     vertexAttribs[0].shaderLocation = 0;
     vertexAttribs[0].format = wgpu::VertexFormat::Float32x3;
     vertexAttribs[0].offset = 0;
 
+    vertexAttribs[1].shaderLocation = 1;
+    vertexAttribs[1].format = wgpu::VertexFormat::Float32x3;
+    vertexAttribs[1].offset = offsetof(VertexAttributes, normal);
+
+    vertexAttribs[2].shaderLocation = 2;
+    vertexAttribs[2].format = wgpu::VertexFormat::Float32x3;
+    vertexAttribs[2].offset = offsetof(VertexAttributes, color);
+
     vertexBufferLayout.attributeCount = static_cast<uint32_t>(vertexAttribs.size());
     vertexBufferLayout.attributes = vertexAttribs.data();
-    vertexBufferLayout.arrayStride = 3 * sizeof(float);
+    vertexBufferLayout.arrayStride = sizeof(VertexAttributes);
     vertexBufferLayout.stepMode = wgpu::VertexStepMode::Vertex;
 
     pipelineDesc.vertex.bufferCount = 1;
