@@ -46,8 +46,9 @@ int main()
 		return 1;
 	}
 
-	Model MvertexData = renderer.loadGeometryFromObj("models/mammoth.obj");
-	Model PvertexData = renderer.loadGeometryFromObj("models/pyramid.obj");
+	Uniforms u = renderer.getDefaultUniforms();
+	Model MvertexData = renderer.createModel("models/mammoth.obj", "shaders/shader.wgsl", u);
+	Model PvertexData = renderer.createModel("models/pyramid.obj", "shaders/shader.wgsl", u);
 
 #ifdef __EMSCRIPTEN__
 	// Equivalent of the main loop when using Emscripten:
@@ -64,11 +65,10 @@ int main()
 		renderer.beginFrame();
 		// renderer.MainLoop();
 		//  renderer.draw({"shaders/circleShader.wgsl", "models/square.txt", {}});
-		Uniforms u = renderer.getDefaultUniforms();
-		MvertexData.material = {"shaders/shader.wgsl", u};
-		PvertexData.material = {"shaders/shader.wgsl", u};
+		//MvertexData.material.uniforms = renderer.getDefaultUniforms();
+		PvertexData.material.uniforms = renderer.getDefaultUniforms();
 		renderer.draw(MvertexData);
-		//renderer.draw(PvertexData);
+		renderer.draw(PvertexData);
 		renderer.endFrame();
 	}
 #endif // __EMSCRIPTEN__

@@ -66,7 +66,7 @@ public:
     void draw(const Model &model);
     void endFrame();
     void beginFrame();
-    Model loadGeometryFromObj(const std::filesystem::path &path);
+    Model createModel(const std::filesystem::path& geometry, const std::filesystem::path& shader, const Uniforms& uniforms);
     Uniforms getDefaultUniforms();
 
     private : wgpu::TextureView GetNextSurfaceTextureView();
@@ -82,7 +82,9 @@ public:
     void createShaderModule(Material material);
     void createPipeline();
 
-private:
+    std::vector<VertexAttributes> loadObj(const std::filesystem::path &geometry);
+
+    private :
     // We put here all the variables that are shared between init and main loop
     GLFWwindow *window;
     wgpu::Device device;
@@ -106,13 +108,10 @@ private:
     uint32_t WIDTH = 750;
     uint32_t HEIGHT = 1200;
 
-    // std::vector<Vertex> vertices;
-    // std::vector<uint16_t> indices;
 };
 
 bool Renderer::Initialize()
 {
-    // Open window
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -120,17 +119,13 @@ bool Renderer::Initialize()
 
     wgpu::Instance instance = wgpuCreateInstance(nullptr);
 
-    std::cout << "Requesting adapter..." << std::endl;
     surface = glfwGetWGPUSurface(instance, window);
+
     wgpu::RequestAdapterOptions adapterOpts = {};
     adapterOpts.nextInChain = nullptr;
     adapterOpts.compatibleSurface = surface;
     wgpu::Adapter adapter = requestAdapterSync(instance, &adapterOpts);
-    std::cout << "Got adapter: " << adapter << std::endl;
 
-    wgpuInstanceRelease(instance);
-
-    std::cout << "Requesting device..." << std::endl;
     wgpu::DeviceDescriptor deviceDesc = {};
     deviceDesc.nextInChain = nullptr;
     deviceDesc.label = "My Device";
@@ -140,7 +135,6 @@ bool Renderer::Initialize()
     deviceDesc.defaultQueue.label = "The default queue";
 
     device = requestDeviceSync(adapter, &deviceDesc);
-    std::cout << "Got device: " << device << std::endl;
 
     auto onDeviceError = [](WGPUErrorType type, char const *message, void * /* pUserData */)
     {
@@ -153,20 +147,16 @@ bool Renderer::Initialize()
 
     queue = wgpuDeviceGetQueue(device);
 
-    // Configure the surface
-    wgpu::SurfaceConfiguration config = {};
-    config.nextInChain = nullptr;
-
-    // Configuration of the textures created for the underlying swap chain
-    config.width = WIDTH;
-    config.height = HEIGHT;
-    config.usage = wgpu::TextureUsage::RenderAttachment;
     wgpu::SurfaceCapabilities capabilities;
     wgpuSurfaceGetCapabilities(surface, adapter, &capabilities);
     surfaceFormat = capabilities.formats[0];
-    config.format = surfaceFormat;
 
-    // And we do not need any particular view format:
+    wgpu::SurfaceConfiguration config = {};
+    config.nextInChain = nullptr;
+    config.width = WIDTH;
+    config.height = HEIGHT;
+    config.usage = wgpu::TextureUsage::RenderAttachment;
+    config.format = surfaceFormat;
     config.viewFormatCount = 0;
     config.viewFormats = nullptr;
     config.device = device;
@@ -175,9 +165,8 @@ bool Renderer::Initialize()
 
     wgpuSurfaceConfigure(surface, &config);
 
-    // Release the adapter only after it has been fully utilized
+    wgpuInstanceRelease(instance);
     wgpuAdapterRelease(adapter);
-
     InitializePipelineDefaults();
     return true;
 }
@@ -340,7 +329,7 @@ void Renderer::InitializePipelineDefaults()
     pipelineDefaults.defaultLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineDefaults.defaultPipelineLayoutDescriptor);
 }
 
-Model Renderer::loadGeometryFromObj(const std::filesystem::path &path)
+std::vector<VertexAttributes> Renderer::loadObj(const std::filesystem::path &geometry)
 {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -350,7 +339,7 @@ Model Renderer::loadGeometryFromObj(const std::filesystem::path &path)
     std::string err;
     std::vector<VertexAttributes> vertexData;
 
-    tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.string().c_str());
+    tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, geometry.string().c_str());
     vertexData.clear();
     for (const auto &shape : shapes)
     {
@@ -378,6 +367,12 @@ Model Renderer::loadGeometryFromObj(const std::filesystem::path &path)
                 attrib.colors[3 * idx.vertex_index + 2]};
         }
     }
+    return vertexData;
+}
+
+Model Renderer::createModel(const std::filesystem::path &geometry, const std::filesystem::path &shader, const Uniforms& uniforms)
+{
+    std::vector<VertexAttributes> vertexData = loadObj(geometry);
     wgpu::BufferDescriptor bufferDesc;
     bufferDesc.size = vertexData.size() * sizeof(VertexAttributes);
     bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex;
@@ -386,7 +381,8 @@ Model Renderer::loadGeometryFromObj(const std::filesystem::path &path)
     queue.writeBuffer(vertexBuffer, 0, vertexData.data(), bufferDesc.size);
 
     uint32_t vertexCount = static_cast<int>(vertexData.size());
-    return Model{vertexBuffer, vertexCount};
+
+    return Model{vertexBuffer, vertexCount, {shader, uniforms}};
 }
 
 void Renderer::writeUniformBuffer(const Material &material)
@@ -443,25 +439,16 @@ Uniforms Renderer::getDefaultUniforms() {
 
 void Renderer::InitializeBindGroups()
 {
-    // Create a binding
     wgpu::BindGroupEntry binding{};
     binding.nextInChain = nullptr;
-    // The index of the binding (the entries in bindGroupDesc can be in any order)
     binding.binding = 0;
-    // The buffer it is actually bound to
     binding.buffer = uniformBuffer;
-    // We can specify an offset within the buffer, so that a single buffer can hold
-    // multiple uniform blocks.
     binding.offset = 0;
-    // And we specify again the size of the buffer.
     binding.size = sizeof(Uniforms);
-    //             ^^^^^^^^^^^^^^^^^^ This was 4 * sizeof(float)
 
-    // A bind group contains one or multiple bindings
     wgpu::BindGroupDescriptor bindGroupDesc{};
     bindGroupDesc.nextInChain = nullptr;
     bindGroupDesc.layout = pipelineDefaults.defaultBindGroupLayout;
-    // There must be as many bindings as declared in the layout!
     bindGroupDesc.entryCount = 1;
     bindGroupDesc.entries = &binding;
     bindGroup = wgpuDeviceCreateBindGroup(device, &bindGroupDesc);
