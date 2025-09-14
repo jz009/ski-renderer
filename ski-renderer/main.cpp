@@ -27,29 +27,21 @@
 #include <array>
 #include "renderer.h"
 #include "shared.h"
+#include "engine.h"
 
-struct Engine
-{
-public:
-	// Initialize everything and return true if it went all right
-	static Engine Initialize(Renderer r);
-};
 
 int main()
 {
 	// Engine engine;
 	Renderer renderer;
-	// Engine engine = Engine::Initialize(renderer);
-
-	if (!renderer.initialize())
-	{
-		return 1;
-	}
+	GLFWwindow* w = renderer.getWindow();
+	Engine engine(w);
 
 	Uniforms u = renderer.getDefaultUniforms();
 	Model MvertexData = renderer.createModel3D("models/mammoth.obj", "shaders/shader.wgsl", u);
 	Model PvertexData = renderer.createModel3D("models/pyramid.obj", "shaders/shader.wgsl", u);
 	Model plane = renderer.createModel2D("models/square.txt", "shaders/planeShader.wgsl", u);
+	int count = 0;
 
 #ifdef __EMSCRIPTEN__
 	// Equivalent of the main loop when using Emscripten:
@@ -62,14 +54,18 @@ int main()
 #else  // __EMSCRIPTEN__
 	while (renderer.isRunning())
 	{
-
+		count = count + 1;
 		renderer.beginFrame();
 		// renderer.MainLoop();
 		//  renderer.draw({"shaders/circleShader.wgsl", "models/square.txt", {}});
 		// MvertexData.material.uniforms = renderer.getDefaultUniforms();
-		// PvertexData.material.uniforms = renderer.getDefaultUniforms();
-		// renderer.draw(MvertexData);
-		// renderer.draw(PvertexData);
+		PvertexData.material.uniforms = renderer.getDefaultUniforms();
+		PvertexData.material.uniforms.modelMatrix = glm::translate(glm::mat4x4(1.0), glm::vec3(0.0f, 5.0f, 0.0f));
+		PvertexData.material.uniforms.modelMatrix = glm::rotate(PvertexData.material.uniforms.modelMatrix, glm::radians((float)(count % 360)), glm::vec3(1.0f, 1.0f, 0.0f));
+
+		PvertexData.material.uniforms.modelMatrix = glm::scale(PvertexData.material.uniforms.modelMatrix, glm::vec3(3.0, 3.0, 3.0));
+		//renderer.draw(MvertexData);
+		renderer.draw(PvertexData);
 		renderer.draw(plane);
 		renderer.endFrame();
 	}

@@ -29,3 +29,8 @@ struct Model {
     uint32_t vertexCount;
     Material material;
 };
+
+struct Camera {
+    glm::vec3 cameraPos;
+    glm::vec3 targetPos;
+};

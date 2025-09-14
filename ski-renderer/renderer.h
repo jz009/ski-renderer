@@ -34,7 +34,6 @@
 
 struct Renderer
 {
-
     struct PipelineDefaults
     {
         wgpu::PipelineLayout defaultLayout;
@@ -53,9 +52,9 @@ struct Renderer
     };
 
 public:
-    // Initialize everything and return true if it went all right
-    bool
-    initialize();
+    Renderer::Renderer();
+    Renderer(const Renderer&) = delete;
+    Renderer operator=(const Renderer&) const = delete; 
 
     // Uninitialize everything that was initialized
     void terminate();
@@ -69,6 +68,7 @@ public:
     Model createModel3D(const std::filesystem::path &geometry, const std::filesystem::path &shader, const Uniforms &uniforms);
     Model createModel2D(const std::filesystem::path &geometry, const std::filesystem::path &shader, const Uniforms &uniforms);
     Uniforms getDefaultUniforms();
+    GLFWwindow *getWindow();
 
 private:
     wgpu::TextureView getNextSurfaceTextureView();
@@ -77,7 +77,7 @@ private:
     // Substep of initialize() that creates the render pipeline
     void initializePipelineDefaults();
     void writeUniformBuffer(const Material &material);
-    void InitializeBindGroups();
+    void initializeBindGroups();
     void updateUniforms();
 
     void updateBuffers();
@@ -108,12 +108,11 @@ private:
     wgpu::ShaderModule shaderModule;
 
     PipelineDefaults pipelineDefaults;
-    uint32_t WIDTH = 750;
-    uint32_t HEIGHT = 1200;
+    uint32_t WIDTH = 1000;
+    uint32_t HEIGHT = 1500;
 };
 
-bool Renderer::initialize()
-{
+Renderer::Renderer() {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -170,7 +169,6 @@ bool Renderer::initialize()
     wgpuInstanceRelease(instance);
     wgpuAdapterRelease(adapter);
     initializePipelineDefaults();
-    return true;
 }
 
 void Renderer::terminate()
@@ -224,6 +222,10 @@ void Renderer::createRenderPass()
     renderPassDesc.timestampWrites = nullptr;
 
     renderPass = encoder.beginRenderPass(renderPassDesc);
+}
+
+GLFWwindow* Renderer::getWindow() {
+    return window;
 }
 
 bool Renderer::isRunning()
@@ -413,7 +415,7 @@ std::vector<VertexAttributes> Renderer::load2D(const std::filesystem::path &geom
         else if (currentSection == Section::Points)
         {
             std::istringstream iss(line);
-                iss >> x >> y >> z;
+            iss >> x >> y >> z;
             vertexData.push_back({glm::vec3(x, y, z), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0)});
         }
     }
@@ -484,7 +486,7 @@ Uniforms Renderer::getDefaultUniforms()
     float far = 100.0f;
     uniforms.modelMatrix = glm::mat4x4(1.0);
     uniforms.modelMatrix = glm::rotate(uniforms.modelMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    //uniforms.modelMatrix = glm::scale(uniforms.modelMatrix, glm::vec3(10.0, 10.0, 0.0));
+    // uniforms.modelMatrix = glm::scale(uniforms.modelMatrix, glm::vec3(10.0, 10.0, 0.0));
 
     glm::vec3 cameraPosition = glm::vec3(0.0f, 10.0f, 10.0f);
     glm::vec3 targetPosition = glm::vec3(0.0f, 3.0f, 0.0f);
@@ -496,7 +498,7 @@ Uniforms Renderer::getDefaultUniforms()
     return uniforms;
 }
 
-void Renderer::InitializeBindGroups()
+void Renderer::initializeBindGroups()
 {
     wgpu::BindGroupEntry binding{};
     binding.nextInChain = nullptr;
@@ -516,7 +518,7 @@ void Renderer::InitializeBindGroups()
 void Renderer::draw(const Model &model)
 {
     writeUniformBuffer(model.material);
-    InitializeBindGroups();
+    initializeBindGroups();
     createShaderModule(model.material);
     createPipeline();
 
