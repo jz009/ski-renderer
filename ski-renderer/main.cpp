@@ -47,9 +47,9 @@ int main()
 	}
 
 	Uniforms u = renderer.getDefaultUniforms();
-	Model MvertexData = renderer.createModel("models/mammoth.obj", "shaders/shader.wgsl", u);
-	Model PvertexData = renderer.createModel("models/pyramid.obj", "shaders/shader.wgsl", u);
-	Model plane = renderer.createModel("models/cube.obj", "shaders/planeShader.wgsl", u);
+	Model MvertexData = renderer.createModel3D("models/mammoth.obj", "shaders/shader.wgsl", u);
+	Model PvertexData = renderer.createModel3D("models/pyramid.obj", "shaders/shader.wgsl", u);
+	Model plane = renderer.createModel2D("models/square.txt", "shaders/planeShader.wgsl", u);
 
 #ifdef __EMSCRIPTEN__
 	// Equivalent of the main loop when using Emscripten:

@@ -66,15 +66,17 @@ public:
     void draw(const Model &model);
     void endFrame();
     void beginFrame();
-    Model createModel(const std::filesystem::path& geometry, const std::filesystem::path& shader, const Uniforms& uniforms);
+    Model createModel3D(const std::filesystem::path &geometry, const std::filesystem::path &shader, const Uniforms &uniforms);
+    Model createModel2D(const std::filesystem::path &geometry, const std::filesystem::path &shader, const Uniforms &uniforms);
     Uniforms getDefaultUniforms();
 
-    private : wgpu::TextureView getNextSurfaceTextureView();
+private:
+    wgpu::TextureView getNextSurfaceTextureView();
     void createRenderPass();
 
     // Substep of initialize() that creates the render pipeline
     void initializePipelineDefaults();
-    void writeUniformBuffer(const Material& material);
+    void writeUniformBuffer(const Material &material);
     void InitializeBindGroups();
     void updateUniforms();
 
@@ -83,8 +85,9 @@ public:
     void createPipeline();
 
     std::vector<VertexAttributes> loadObj(const std::filesystem::path &geometry);
+    std::vector<VertexAttributes> load2D(const std::filesystem::path &geometry);
 
-    private :
+private:
     // We put here all the variables that are shared between init and main loop
     GLFWwindow *window;
     wgpu::Device device;
@@ -107,7 +110,6 @@ public:
     PipelineDefaults pipelineDefaults;
     uint32_t WIDTH = 750;
     uint32_t HEIGHT = 1200;
-
 };
 
 bool Renderer::initialize()
@@ -370,7 +372,70 @@ std::vector<VertexAttributes> Renderer::loadObj(const std::filesystem::path &geo
     return vertexData;
 }
 
-Model Renderer::createModel(const std::filesystem::path &geometry, const std::filesystem::path &shader, const Uniforms& uniforms)
+std::vector<VertexAttributes> Renderer::load2D(const std::filesystem::path &geometry)
+{
+    std::vector<VertexAttributes> vertexData;
+
+    std::ifstream file(geometry);
+
+    enum class Section
+    {
+        None,
+        Points,
+        Indices,
+    };
+    Section currentSection = Section::None;
+
+    float x, y, z;
+    std::string line;
+    while (!file.eof())
+    {
+        getline(file, line);
+
+        // overcome the `CRLF` problem
+        if (!line.empty() && line.back() == '\r')
+        {
+            line.pop_back();
+        }
+
+        if (line == "[points]")
+        {
+            currentSection = Section::Points;
+        }
+        else if (line == "[indices]")
+        {
+            currentSection = Section::Indices;
+        }
+        else if (line[0] == '#' || line.empty())
+        {
+            // Do nothing, this is a comment
+        }
+        else if (currentSection == Section::Points)
+        {
+            std::istringstream iss(line);
+                iss >> x >> y >> z;
+            vertexData.push_back({glm::vec3(x, y, z), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0)});
+        }
+    }
+    return vertexData;
+}
+
+Model Renderer::createModel2D(const std::filesystem::path &geometry, const std::filesystem::path &shader, const Uniforms &uniforms)
+{
+    std::vector<VertexAttributes> vertexData = load2D(geometry);
+    wgpu::BufferDescriptor bufferDesc;
+    bufferDesc.size = vertexData.size() * sizeof(VertexAttributes);
+    bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex;
+    bufferDesc.mappedAtCreation = false;
+    wgpu::Buffer vertexBuffer = device.createBuffer(bufferDesc);
+    queue.writeBuffer(vertexBuffer, 0, vertexData.data(), bufferDesc.size);
+
+    uint32_t vertexCount = static_cast<int>(vertexData.size());
+
+    return Model{vertexBuffer, vertexCount, {shader, uniforms}};
+}
+
+Model Renderer::createModel3D(const std::filesystem::path &geometry, const std::filesystem::path &shader, const Uniforms &uniforms)
 {
     std::vector<VertexAttributes> vertexData = loadObj(geometry);
     wgpu::BufferDescriptor bufferDesc;
@@ -406,31 +471,25 @@ void Renderer::writeUniformBuffer(const Material &material)
     wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &material.uniforms, sizeof(Uniforms));
 }
 
-Uniforms Renderer::getDefaultUniforms() {
+Uniforms Renderer::getDefaultUniforms()
+{
     Uniforms uniforms;
     uniforms.time = static_cast<float>(glfwGetTime());
     uniforms.color = {0.0f, 1.0f, 0.4f, 1.0f};
     // Upload the initial value of the uniforms
     glm::vec3 focalPoint(0.0, 0.0, -2.0);
-    float angle1 = uniforms.time;
-    float angle2 = 3.0f * (float)M_PI / 4.0f;
     float ratio = (float)WIDTH / (float)HEIGHT;
-    float focalLength = 2.0;
+    float focalLength = 1.0;
     float near = 0.01f;
     float far = 100.0f;
-    glm::mat4x4 S = glm::scale(glm::mat4x4(1.0), glm::vec3(0.3f));
-    glm::mat4x4 T1 = glm::translate(glm::mat4x4(1.0), glm::vec3(0.5, 0.0, 0.0));
-    glm::mat4x4 R1 = glm::rotate(glm::mat4x4(1.0), angle1, glm::vec3(0.0, 0.0, 1.0));
-    uniforms.modelMatrix = R1 * T1 * S;
+    uniforms.modelMatrix = glm::mat4x4(1.0);
+    uniforms.modelMatrix = glm::rotate(uniforms.modelMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+    //uniforms.modelMatrix = glm::scale(uniforms.modelMatrix, glm::vec3(10.0, 10.0, 0.0));
 
-    glm::mat4x4 R2 = glm::rotate(glm::mat4x4(1.0), -angle2, glm::vec3(1.0, 0.0, 0.0));
-    glm::mat4x4 T2 = glm::translate(glm::mat4x4(1.0), -focalPoint);
-    uniforms.viewMatrix = T2 * R2;
-
-    glm::mat4x4 V(1.0);
-    V = glm::translate(V, -focalPoint);
-    V = glm::rotate(V, -angle2, glm::vec3(1.0, 0.0, 0.0));
-    uniforms.viewMatrix = V;
+    glm::vec3 cameraPosition = glm::vec3(0.0f, 10.0f, 10.0f);
+    glm::vec3 targetPosition = glm::vec3(0.0f, 3.0f, 0.0f);
+    glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
+    uniforms.viewMatrix = glm::lookAt(cameraPosition, targetPosition, upVector);
 
     float fov = 2 * glm::atan(1 / focalLength);
     uniforms.projectionMatrix = glm::perspective(fov, ratio, near, far);
@@ -454,7 +513,7 @@ void Renderer::InitializeBindGroups()
     bindGroup = wgpuDeviceCreateBindGroup(device, &bindGroupDesc);
 }
 
-void Renderer::draw(const Model& model)
+void Renderer::draw(const Model &model)
 {
     writeUniformBuffer(model.material);
     InitializeBindGroups();

@@ -29,21 +29,16 @@ fn vs_main(@location(0) position : vec3<f32>) -> VertexOutput {
 
 @fragment
 fn fs_main(@location(0) worldPos : vec3<f32>) -> @location(0) vec4<f32> {
-    let cellSize = 1.0; // spacing between grid lines
-    let coord = worldPos.xz / cellSize;
+    let coord = worldPos.xyz / 5.0;
 
-    // distance to nearest grid line
-    let fx = abs(fract(coord.x) - 0.5);
-    let fz = abs(fract(coord.y) - 0.5);
+    let fx = abs(coord.x - round(coord.x));
+    let fz = abs(coord.y - round(coord.y));
     let line = min(fx, fz);
 
-    // thickness of grid lines
     let thickness = 0.02;
 
-    // smooth blend between line and ground
     let lineMask = smoothstep(thickness, 0.0, line);
 
-    // colors
     let groundColor = vec3<f32>(0.1, 0.1, 0.1);
     let lineColor   = vec3<f32>(0.8, 0.8, 0.8);
 
