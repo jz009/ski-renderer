@@ -49,6 +49,7 @@ int main()
 	Uniforms u = renderer.getDefaultUniforms();
 	Model MvertexData = renderer.createModel("models/mammoth.obj", "shaders/shader.wgsl", u);
 	Model PvertexData = renderer.createModel("models/pyramid.obj", "shaders/shader.wgsl", u);
+	Model plane = renderer.createModel("models/cube.obj", "shaders/planeShader.wgsl", u);
 
 #ifdef __EMSCRIPTEN__
 	// Equivalent of the main loop when using Emscripten:
@@ -61,14 +62,15 @@ int main()
 #else  // __EMSCRIPTEN__
 	while (renderer.isRunning())
 	{
-		
+
 		renderer.beginFrame();
 		// renderer.MainLoop();
 		//  renderer.draw({"shaders/circleShader.wgsl", "models/square.txt", {}});
-		//MvertexData.material.uniforms = renderer.getDefaultUniforms();
-		PvertexData.material.uniforms = renderer.getDefaultUniforms();
-		renderer.draw(MvertexData);
-		renderer.draw(PvertexData);
+		// MvertexData.material.uniforms = renderer.getDefaultUniforms();
+		// PvertexData.material.uniforms = renderer.getDefaultUniforms();
+		// renderer.draw(MvertexData);
+		// renderer.draw(PvertexData);
+		renderer.draw(plane);
 		renderer.endFrame();
 	}
 #endif // __EMSCRIPTEN__
