@@ -24,13 +24,21 @@ struct Material
     Uniforms uniforms;
 };
 
-struct Model {
+struct Model
+{
     wgpu::Buffer buffer;
     uint32_t vertexCount;
     Material material;
 };
 
-struct Camera {
+struct Camera
+{
     glm::vec3 cameraPos;
     glm::vec3 targetPos;
+
+    Camera::Camera()
+    {
+        cameraPos = glm::vec3(0.0f, 10.0f, 10.0f);
+        targetPos = glm::vec3(0.0f, 3.0f, 0.0f);
+    }
 };

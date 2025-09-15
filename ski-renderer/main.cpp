@@ -61,9 +61,12 @@ int main()
 		// MvertexData.material.uniforms = renderer.getDefaultUniforms();
 		PvertexData.material.uniforms = renderer.getDefaultUniforms();
 		PvertexData.material.uniforms.modelMatrix = glm::translate(glm::mat4x4(1.0), glm::vec3(0.0f, 5.0f, 0.0f));
-		PvertexData.material.uniforms.modelMatrix = glm::rotate(PvertexData.material.uniforms.modelMatrix, glm::radians((float)(count % 360)), glm::vec3(1.0f, 1.0f, 0.0f));
-
+		// PvertexData.material.uniforms.modelMatrix = glm::rotate(PvertexData.material.uniforms.modelMatrix, glm::radians((float)(count % 360)), glm::vec3(1.0f, 1.0f, 0.0f));
 		PvertexData.material.uniforms.modelMatrix = glm::scale(PvertexData.material.uniforms.modelMatrix, glm::vec3(3.0, 3.0, 3.0));
+		glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
+		Camera camera = engine.getCamera();
+		PvertexData.material.uniforms.viewMatrix = glm::lookAt(camera.cameraPos, camera.targetPos, upVector);
+
 		//renderer.draw(MvertexData);
 		renderer.draw(PvertexData);
 		renderer.draw(plane);
