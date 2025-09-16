@@ -29,7 +29,7 @@ fn vs_main(@location(0) position : vec3<f32>) -> VertexOutput {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let coord = in.worldPos.xyz / 5.0;
+    let coord = in.pos.xyz / 100.0;
 
     let fx = abs(coord.x - round(coord.x));
     let fz = abs(coord.y - round(coord.y));

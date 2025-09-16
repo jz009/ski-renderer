@@ -5,7 +5,10 @@ const float D2R = (float)M_PI / 180.f;
 uint32_t WIDTH = 1000;
 uint32_t HEIGHT = 1500;
 
-struct Uniforms
+std::filesystem::path mCUBE = "models/cube.obj";
+std::filesystem::path sDEFAULT = "shaders/shader.wgsl";
+
+    struct Uniforms
 {
     glm::mat4x4 projectionMatrix;
     glm::mat4x4 viewMatrix;
@@ -24,7 +27,7 @@ struct VertexAttributes
 
 struct Material
 {
-    std::filesystem::path shaderPath;
+    wgpu::ShaderModule shader;
     Uniforms uniforms;
 };
 

@@ -52,23 +52,22 @@ struct Renderer
     };
 
 public:
+    GLFWwindow *window;
+
     Renderer::Renderer();
-    Renderer(const Renderer&) = delete;
-    Renderer operator=(const Renderer&) const = delete; 
+    Renderer(const Renderer &) = delete;
+    Renderer operator=(const Renderer &) const = delete;
 
-    // Uninitialize everything that was initialized
     void terminate();
-
-    // Return true as long as the main loop should keep on running
     bool isRunning();
 
     void draw(const Model &model);
     void endFrame();
     void beginFrame();
-    Model createModel3D(const std::filesystem::path &geometry, const std::filesystem::path &shader, const Uniforms &uniforms);
-    Model createModel2D(const std::filesystem::path &geometry, const std::filesystem::path &shader, const Uniforms &uniforms);
+
+    Model createModel3D(const std::filesystem::path &geometry, const std::filesystem::path &shaderPath, const Uniforms &uniforms);
+    Model createModel2D(const std::filesystem::path &geometry, const std::filesystem::path &shaderPath, const Uniforms &uniforms);
     Uniforms getDefaultUniforms();
-    GLFWwindow *getWindow();
 
 private:
     wgpu::TextureView getNextSurfaceTextureView();
@@ -81,15 +80,13 @@ private:
     void updateUniforms();
 
     void updateBuffers();
-    void createShaderModule(Material material);
-    void createPipeline();
+    wgpu::ShaderModule createShaderModule(std::filesystem::path shaderPath);
+    void createPipeline(wgpu::ShaderModule shaderModule);
 
     std::vector<VertexAttributes> loadObj(const std::filesystem::path &geometry);
     std::vector<VertexAttributes> load2D(const std::filesystem::path &geometry);
 
 private:
-    // We put here all the variables that are shared between init and main loop
-    GLFWwindow *window;
     wgpu::Device device;
     wgpu::Queue queue;
     wgpu::Surface surface;
@@ -105,12 +102,11 @@ private:
     wgpu::RenderPassEncoder renderPass;
     wgpu::CommandEncoder encoder;
 
-    wgpu::ShaderModule shaderModule;
-
     PipelineDefaults pipelineDefaults;
 };
 
-Renderer::Renderer() {
+Renderer::Renderer()
+{
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -220,10 +216,6 @@ void Renderer::createRenderPass()
     renderPassDesc.timestampWrites = nullptr;
 
     renderPass = encoder.beginRenderPass(renderPassDesc);
-}
-
-GLFWwindow* Renderer::getWindow() {
-    return window;
 }
 
 bool Renderer::isRunning()
@@ -420,7 +412,7 @@ std::vector<VertexAttributes> Renderer::load2D(const std::filesystem::path &geom
     return vertexData;
 }
 
-Model Renderer::createModel2D(const std::filesystem::path &geometry, const std::filesystem::path &shader, const Uniforms &uniforms)
+Model Renderer::createModel2D(const std::filesystem::path &geometry, const std::filesystem::path &shaderPath, const Uniforms &uniforms)
 {
     std::vector<VertexAttributes> vertexData = load2D(geometry);
     wgpu::BufferDescriptor bufferDesc;
@@ -430,12 +422,14 @@ Model Renderer::createModel2D(const std::filesystem::path &geometry, const std::
     wgpu::Buffer vertexBuffer = device.createBuffer(bufferDesc);
     queue.writeBuffer(vertexBuffer, 0, vertexData.data(), bufferDesc.size);
 
+    wgpu::ShaderModule shader = createShaderModule(shaderPath);
+
     uint32_t vertexCount = static_cast<int>(vertexData.size());
 
     return Model{vertexBuffer, vertexCount, {shader, uniforms}};
 }
 
-Model Renderer::createModel3D(const std::filesystem::path &geometry, const std::filesystem::path &shader, const Uniforms &uniforms)
+Model Renderer::createModel3D(const std::filesystem::path &geometry, const std::filesystem::path &shaderPath, const Uniforms &uniforms)
 {
     std::vector<VertexAttributes> vertexData = loadObj(geometry);
     wgpu::BufferDescriptor bufferDesc;
@@ -444,6 +438,8 @@ Model Renderer::createModel3D(const std::filesystem::path &geometry, const std::
     bufferDesc.mappedAtCreation = false;
     wgpu::Buffer vertexBuffer = device.createBuffer(bufferDesc);
     queue.writeBuffer(vertexBuffer, 0, vertexData.data(), bufferDesc.size);
+
+    wgpu::ShaderModule shader = createShaderModule(shaderPath);
 
     uint32_t vertexCount = static_cast<int>(vertexData.size());
 
@@ -476,15 +472,13 @@ Uniforms Renderer::getDefaultUniforms()
     Uniforms uniforms;
     uniforms.time = static_cast<float>(glfwGetTime());
     uniforms.color = {0.0f, 1.0f, 0.4f, 1.0f};
-    // Upload the initial value of the uniforms
+
     glm::vec3 focalPoint(0.0, 0.0, -2.0);
     float ratio = (float)WIDTH / (float)HEIGHT;
     float focalLength = 1.0;
     float near = 0.01f;
     float far = 100.0f;
     uniforms.modelMatrix = glm::mat4x4(1.0);
-    uniforms.modelMatrix = glm::rotate(uniforms.modelMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    // uniforms.modelMatrix = glm::scale(uniforms.modelMatrix, glm::vec3(10.0, 10.0, 0.0));
 
     glm::vec3 cameraPosition = glm::vec3(0.0f, 10.0f, 10.0f);
     glm::vec3 targetPosition = glm::vec3(0.0f, 3.0f, 0.0f);
@@ -517,8 +511,7 @@ void Renderer::draw(const Model &model)
 {
     writeUniformBuffer(model.material);
     initializeBindGroups();
-    createShaderModule(model.material);
-    createPipeline();
+    createPipeline(model.material.shader);
 
     renderPass.setPipeline(pipeline);
     renderPass.setVertexBuffer(0, model.buffer, 0, model.buffer.getSize());
@@ -561,13 +554,9 @@ void Renderer::endFrame()
 #endif
 }
 
-void Renderer::createShaderModule(Material material)
+wgpu::ShaderModule Renderer::createShaderModule(std::filesystem::path shaderPath)
 {
-    std::ifstream file(material.shaderPath);
-    if (!file.is_open())
-    {
-        return;
-    }
+    std::ifstream file(shaderPath);
     file.seekg(0, std::ios::end);
     size_t size = file.tellg();
     std::string shaderSource(size, ' ');
@@ -585,10 +574,10 @@ void Renderer::createShaderModule(Material material)
     shaderDesc.hints = nullptr;
 #endif
     shaderDesc.nextInChain = &shaderCodeDesc.chain;
-    shaderModule = device.createShaderModule(shaderDesc);
+    return device.createShaderModule(shaderDesc);
 }
 
-void Renderer::createPipeline()
+void Renderer::createPipeline(wgpu::ShaderModule shaderModule)
 {
     wgpu::RenderPipelineDescriptor pipelineDesc{};
     pipelineDesc.nextInChain = nullptr;
