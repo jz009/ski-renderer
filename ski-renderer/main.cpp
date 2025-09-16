@@ -39,7 +39,7 @@ int main()
 
 	Uniforms u = renderer.getDefaultUniforms();
 	Model MvertexData = renderer.createModel3D("models/mammoth.obj", "shaders/shader.wgsl", u);
-	Model PvertexData = renderer.createModel3D("models/pyramid.obj", "shaders/shader.wgsl", u);
+	Model PvertexData = renderer.createModel3D("models/cube.obj", "shaders/shader.wgsl", u);
 	Model plane = renderer.createModel2D("models/square.txt", "shaders/planeShader.wgsl", u);
 	int count = 0;
 
@@ -60,16 +60,16 @@ int main()
 		//  renderer.draw({"shaders/circleShader.wgsl", "models/square.txt", {}});
 		// MvertexData.material.uniforms = renderer.getDefaultUniforms();
 		PvertexData.material.uniforms = renderer.getDefaultUniforms();
-		PvertexData.material.uniforms.modelMatrix = glm::translate(glm::mat4x4(1.0), glm::vec3(0.0f, 5.0f, 0.0f));
-		// PvertexData.material.uniforms.modelMatrix = glm::rotate(PvertexData.material.uniforms.modelMatrix, glm::radians((float)(count % 360)), glm::vec3(1.0f, 1.0f, 0.0f));
-		PvertexData.material.uniforms.modelMatrix = glm::scale(PvertexData.material.uniforms.modelMatrix, glm::vec3(3.0, 3.0, 3.0));
+		PvertexData.material.uniforms.modelMatrix = glm::translate(glm::mat4x4(1.0), glm::vec3(-2.0f, 5.0f, -5.0f));
+		PvertexData.material.uniforms.modelMatrix = glm::rotate(PvertexData.material.uniforms.modelMatrix, glm::radians((float)(count % 360)), glm::vec3(1.0f, 1.0f, 0.0f));
+		PvertexData.material.uniforms.modelMatrix = glm::scale(PvertexData.material.uniforms.modelMatrix, glm::vec3(6.0, 1.0, 7.0));
 		glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
-		Camera camera = engine.getCamera();
+		const Camera& camera = engine.getCamera();
 		PvertexData.material.uniforms.viewMatrix = glm::lookAt(camera.cameraPos, camera.targetPos, upVector);
 
 		//renderer.draw(MvertexData);
 		renderer.draw(PvertexData);
-		renderer.draw(plane);
+		//renderer.draw(plane);
 		renderer.endFrame();
 	}
 #endif // __EMSCRIPTEN__

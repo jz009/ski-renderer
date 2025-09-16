@@ -4,16 +4,16 @@
 struct Engine
 {
 public:
-    Engine::Engine(GLFWwindow* window_);
+    Engine::Engine(GLFWwindow *window_);
     void onKeyPress(int key, int scancode, int action, int mods);
-    Camera getCamera();
+    const Camera& getCamera() const;
 
 private:
     GLFWwindow *window;
     Camera camera;
+    bool first = true;
 
     void moveCamera(glm::vec3 direction);
-    void tiltCamera(glm::vec3 direction);
 };
 
 void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
@@ -36,55 +36,35 @@ void Engine::onKeyPress(int key, int scancode, int action, int mods)
     {
         moveCamera(glm::vec3(0.5, 0.0, 0.0));
     }
-    if (key == GLFW_KEY_D && (action == GLFW_REPEAT || action == GLFW_PRESS))
+    else if (key == GLFW_KEY_D && (action == GLFW_REPEAT || action == GLFW_PRESS))
     {
         moveCamera(glm::vec3(-0.5, 0.0, 0.0));
     }
-    if (key == GLFW_KEY_W && (action == GLFW_REPEAT || action == GLFW_PRESS))
+    else if (key == GLFW_KEY_W && (action == GLFW_REPEAT || action == GLFW_PRESS))
     {
         moveCamera(glm::vec3(0.0, 0.0, -0.5));
     }
-    if (key == GLFW_KEY_S && (action == GLFW_REPEAT || action == GLFW_PRESS))
+    else if (key == GLFW_KEY_S && (action == GLFW_REPEAT || action == GLFW_PRESS))
     {
         moveCamera(glm::vec3(0.0, 0.0, 0.5));
     }
-    if (key == GLFW_KEY_SPACE && (action == GLFW_REPEAT || action == GLFW_PRESS))
+    else if (key == GLFW_KEY_SPACE && (action == GLFW_REPEAT || action == GLFW_PRESS))
     {
         moveCamera(glm::vec3(0.0, 0.5, 0.0));
     }
-    if (key == GLFW_KEY_LEFT_SHIFT && (action == GLFW_REPEAT || action == GLFW_PRESS))
+    else if (key == GLFW_KEY_LEFT_SHIFT && (action == GLFW_REPEAT || action == GLFW_PRESS))
     {
         moveCamera(glm::vec3(0.0, -0.5, 0.0));
     }
-
-    if (key == GLFW_KEY_RIGHT && (action == GLFW_REPEAT || action == GLFW_PRESS))
-    {
-        tiltCamera(glm::vec3(-0.5, 0.0, 0.0));
-    }
-    if (key == GLFW_KEY_LEFT && (action == GLFW_REPEAT || action == GLFW_PRESS))
-    {
-        tiltCamera(glm::vec3(0.5, 0.0, 0.0));
-    }
-    if (key == GLFW_KEY_UP && (action == GLFW_REPEAT || action == GLFW_PRESS))
-    {
-        tiltCamera(glm::vec3(0.0, 0.5, 0.0));
-    }
-    if (key == GLFW_KEY_DOWN && (action == GLFW_REPEAT || action == GLFW_PRESS))
-    {
-        tiltCamera(glm::vec3(0.0, -0.5, 0.0));
-    }
 }
 
-void Engine::moveCamera(glm::vec3 direction) {
+void Engine::moveCamera(glm::vec3 direction)
+{
     camera.cameraPos += direction;
     camera.targetPos += direction;
 }
 
-void Engine::tiltCamera(glm::vec3 direction)
+const Camera& Engine::getCamera() const
 {
-    camera.targetPos += direction;
-}
-
-Camera Engine::getCamera() {
     return camera;
 }

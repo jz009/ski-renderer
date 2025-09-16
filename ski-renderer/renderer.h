@@ -108,8 +108,6 @@ private:
     wgpu::ShaderModule shaderModule;
 
     PipelineDefaults pipelineDefaults;
-    uint32_t WIDTH = 1000;
-    uint32_t HEIGHT = 1500;
 };
 
 Renderer::Renderer() {

@@ -1,6 +1,10 @@
 #pragma once
 #include "renderer.h"
 
+const float D2R = (float)M_PI / 180.f;
+uint32_t WIDTH = 1000;
+uint32_t HEIGHT = 1500;
+
 struct Uniforms
 {
     glm::mat4x4 projectionMatrix;
@@ -38,7 +42,9 @@ struct Camera
 
     Camera::Camera()
     {
-        cameraPos = glm::vec3(0.0f, 10.0f, 10.0f);
+        cameraPos = glm::vec3(3.0f, 15.0f, 10.0f);
         targetPos = glm::vec3(0.0f, 3.0f, 0.0f);
     }
+    Camera(const Camera &) = delete;
+    Camera operator=(const Camera &) const = delete;
 };
