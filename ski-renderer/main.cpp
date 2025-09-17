@@ -1,6 +1,4 @@
 #pragma once
-#include "utils/wgpu-utils.h"
-#include "utils/ResourceManager.h"
 #include "utils/glfw3webgpu.h"
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -11,15 +9,8 @@
 #include <math.h>
 
 #include <webgpu/webgpu.h>
-#ifdef WEBGPU_BACKEND_WGPU
-#include <webgpu/wgpu.h>
-#endif // WEBGPU_BACKEND_WGPU
 
 #include <GLFW/glfw3.h>
-
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#endif // __EMSCRIPTEN__
 
 #include <iostream>
 #include <cassert>
@@ -27,39 +18,36 @@
 #include <array>
 #include "renderer.h"
 #include "shared.h"
-#include "engine.h"
-
+#include "input.h"
 
 int main()
 {
-	// Engine engine;
 	Renderer renderer;
-	GLFWwindow* window = renderer.window;
-	Engine engine(window);
-
-	Uniforms uniform = renderer.getDefaultUniforms();
-	engine.models.push_back(renderer.createModel3D(mCUBE, sDEFAULT, uniform));
+	GLFWwindow *window = renderer.window;
+	Input input(window);
 	int count = 0;
 
-#ifdef __EMSCRIPTEN__
-	// Equivalent of the main loop when using Emscripten:
-	auto callback = [](void *arg)
-	{
-		Renderer *prenderer = reinterpret_cast<Renderer *>(arg);
-		prenderer->MainLoop(); // 4. We can use the Renderer object
-	};
-	emscripten_set_main_loop_arg(callback, &renderer, 0, true);
-#else  // __EMSCRIPTEN__
+	std::vector<std::unique_ptr<Entity>> entities;
+	std::unique_ptr<Player, std::default_delete<Player>> player = std::make_unique<Player>();
+	player->model = renderer.createModel3D(mCUBE, sDEFAULT, getDefaultUniforms());
+	player->moveable.targetPosition = glm::vec3(100., 0.5, 0.0);
+	entities.push_back(std::move(player));
+
 	while (renderer.isRunning())
 	{
 		count = count + 1;
 		renderer.beginFrame();
-		for (Model model : engine.models) {
-			renderer.draw(model);
+		for (auto& entity : entities)
+		{
+			entity->onFrame();
+		}
+		while (!models.empty())
+		{
+			renderer.draw(models.front());
+			models.pop();
 		}
 		renderer.endFrame();
 	}
-#endif // __EMSCRIPTEN__
 
 	renderer.terminate();
 

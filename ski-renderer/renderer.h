@@ -1,6 +1,4 @@
 #pragma once
-#include "utils/wgpu-utils.h"
-#include "utils/ResourceManager.h"
 #include "utils/glfw3webgpu.h"
 
 #define WEBGPU_CPP_IMPLEMENTATION
@@ -26,6 +24,7 @@
 
 #include <iostream>
 #include <cassert>
+#include <filesystem>
 #include <vector>
 #include <array>
 #include <corecrt_math_defines.h>
@@ -85,9 +84,10 @@ private:
 
     std::vector<VertexAttributes> loadObj(const std::filesystem::path &geometry);
     std::vector<VertexAttributes> load2D(const std::filesystem::path &geometry);
+    wgpu::Adapter requestAdapterSync(WGPUInstance instance, WGPURequestAdapterOptions const *options);
+    wgpu::Device requestDeviceSync(WGPUAdapter adapter, WGPUDeviceDescriptor const *descriptor);
 
-private:
-    wgpu::Device device;
+        private : wgpu::Device device;
     wgpu::Queue queue;
     wgpu::Surface surface;
     wgpu::TextureFormat surfaceFormat = wgpu::TextureFormat::Undefined;
@@ -467,29 +467,6 @@ void Renderer::writeUniformBuffer(const Material &material)
     wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &material.uniforms, sizeof(Uniforms));
 }
 
-Uniforms Renderer::getDefaultUniforms()
-{
-    Uniforms uniforms;
-    uniforms.time = static_cast<float>(glfwGetTime());
-    uniforms.color = {0.0f, 1.0f, 0.4f, 1.0f};
-
-    glm::vec3 focalPoint(0.0, 0.0, -2.0);
-    float ratio = (float)WIDTH / (float)HEIGHT;
-    float focalLength = 1.0;
-    float near = 0.01f;
-    float far = 100.0f;
-    uniforms.modelMatrix = glm::mat4x4(1.0);
-
-    glm::vec3 cameraPosition = glm::vec3(0.0f, 10.0f, 10.0f);
-    glm::vec3 targetPosition = glm::vec3(0.0f, 3.0f, 0.0f);
-    glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
-    uniforms.viewMatrix = glm::lookAt(cameraPosition, targetPosition, upVector);
-
-    float fov = 2 * glm::atan(1 / focalLength);
-    uniforms.projectionMatrix = glm::perspective(fov, ratio, near, far);
-    return uniforms;
-}
-
 void Renderer::initializeBindGroups()
 {
     wgpu::BindGroupEntry binding{};
@@ -634,4 +611,72 @@ void Renderer::createPipeline(wgpu::ShaderModule shaderModule)
     pipelineDesc.layout = pipelineDefaults.defaultLayout;
 
     pipeline = device.createRenderPipeline(pipelineDesc);
+}
+
+wgpu::Adapter Renderer::requestAdapterSync(WGPUInstance instance, WGPURequestAdapterOptions const *options)
+{
+    struct UserData
+    {
+        WGPUAdapter adapter = nullptr;
+        bool requestEnded = false;
+    };
+    UserData userData;
+
+    auto onAdapterRequestEnded = [](WGPURequestAdapterStatus status, WGPUAdapter adapter, char const *message, void *pUserData)
+    {
+        UserData &userData = *reinterpret_cast<UserData *>(pUserData);
+        if (status == WGPURequestAdapterStatus_Success)
+        {
+            userData.adapter = adapter;
+        }
+        else
+        {
+            std::cout << "Could not get WebGPU adapter: " << message << std::endl;
+        }
+        userData.requestEnded = true;
+    };
+
+    wgpuInstanceRequestAdapter(
+        instance,
+        options,
+        onAdapterRequestEnded,
+        (void *)&userData);
+
+    assert(userData.requestEnded);
+
+    return userData.adapter;
+}
+
+wgpu::Device Renderer::requestDeviceSync(WGPUAdapter adapter, WGPUDeviceDescriptor const *descriptor)
+{
+    struct UserData
+    {
+        WGPUDevice device = nullptr;
+        bool requestEnded = false;
+    };
+    UserData userData;
+
+    auto onDeviceRequestEnded = [](WGPURequestDeviceStatus status, WGPUDevice device, char const *message, void *pUserData)
+    {
+        UserData &userData = *reinterpret_cast<UserData *>(pUserData);
+        if (status == WGPURequestDeviceStatus_Success)
+        {
+            userData.device = device;
+        }
+        else
+        {
+            std::cout << "Could not get WebGPU device: " << message << std::endl;
+        }
+        userData.requestEnded = true;
+    };
+
+    wgpuAdapterRequestDevice(
+        adapter,
+        descriptor,
+        onDeviceRequestEnded,
+        (void *)&userData);
+
+    assert(userData.requestEnded);
+
+    return userData.device;
 }

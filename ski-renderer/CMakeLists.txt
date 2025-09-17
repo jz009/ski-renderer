@@ -16,10 +16,6 @@ add_subdirectory(webgpu)
 
 add_executable(App
 	main.cpp
-    utils/wgpu-utils.cpp
-    utils/wgpu-utils.h
-    utils/ResourceManager.cpp
-	utils/ResourceManager.h
     utils/glfw3webgpu.c
 	utils/glfw3webgpu.h
 )
