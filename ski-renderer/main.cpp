@@ -24,13 +24,13 @@ int main()
 {
 	Renderer renderer;
 	GLFWwindow *window = renderer.window;
-	Input input(window);
+	getInput()->init(window);
 	int count = 0;
 
 	std::vector<std::unique_ptr<Entity>> entities;
-	std::unique_ptr<Player, std::default_delete<Player>> player = std::make_unique<Player>();
+	std::unique_ptr<Player> player = std::make_unique<Player>();
 	player->model = renderer.createModel3D(mCUBE, sDEFAULT, getDefaultUniforms());
-	player->moveable.targetPosition = glm::vec3(100., 0.5, 0.0);
+	player->moveable.targetPosition = glm::vec3(0.0, 0.0, 0.0);
 	entities.push_back(std::move(player));
 
 	while (renderer.isRunning())
