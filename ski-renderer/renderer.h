@@ -110,7 +110,7 @@ Renderer::Renderer()
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    window = glfwCreateWindow(WIDTH, WIDTH, "Learn WebGPU", nullptr, nullptr);
+    window = glfwCreateWindow(WIDTH, HEIGHT, "Learn WebGPU", nullptr, nullptr);
 
     wgpu::Instance instance = wgpuCreateInstance(nullptr);
 

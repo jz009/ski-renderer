@@ -29,9 +29,16 @@ int main()
 
 	std::vector<std::unique_ptr<Entity>> entities;
 	std::unique_ptr<Player> player = std::make_unique<Player>();
+	std::unique_ptr<Terrain> terrain = std::make_unique<Terrain>();
+	terrain->model = renderer.createModel3D(mCUBE, sDEFAULT, getDefaultUniforms());
+	terrain->model.scale = {100.0, 1.0, 100.0};
+	terrain->model.material.uniforms.color = {1.0, 0.0, 0.0, 1.0};
+	terrain->model.position = {0.0, -1.0, 0.0};
 	player->model = renderer.createModel3D(mCUBE, sDEFAULT, getDefaultUniforms());
 	player->moveable.targetPosition = glm::vec3(0.0, 0.0, 0.0);
+	player->model.offset = glm::vec3(0.0, 0.5, 0.0);
 	entities.push_back(std::move(player));
+	entities.push_back(std::move(terrain));
 
 	while (renderer.isRunning())
 	{
@@ -47,6 +54,7 @@ int main()
 			models.pop();
 		}
 		renderer.endFrame();
+		getInput()->clear();
 	}
 
 	renderer.terminate();

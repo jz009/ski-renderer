@@ -4,8 +4,8 @@
 #include <queue>
 
 const float D2R = (float)M_PI / 180.f;
-uint32_t WIDTH = 1000;
-uint32_t HEIGHT = 1500;
+uint32_t WIDTH = 1500;
+uint32_t HEIGHT = 1000;
 
 std::filesystem::path mCUBE = "models/cube.obj";
 std::filesystem::path sDEFAULT = "shaders/shader.wgsl";
@@ -47,6 +47,7 @@ struct Model
     glm::vec3 scale = {1.0, 1.0, 1.0};
     glm::vec3 rotation;
     glm::vec3 position;
+    glm::vec3 offset = {0.0, 0.0, 0.0};
 };
 
 struct Moveable
@@ -55,23 +56,34 @@ struct Moveable
     glm::vec3 targetPosition;
 };
 
-struct Terrain : Entity
-{
-    Model model;
-    void onFrame() override {}
-    void onLoad() override {}
-};
-
 std::queue<Model> models;
-
 void updateModel(Model &model);
 void move(const Moveable &moveable, glm::vec3 &position);
 
-glm::vec2 toScreenSpace(glm::vec2 in)
+struct Terrain : Entity
 {
-    glm::vec2 center = {WIDTH / 2, HEIGHT / 2};
-    glm::vec2 offset = center - in;
-    return offset * glm::vec2(2.0, 2.0) / (glm::vec2{WIDTH, HEIGHT} );
+    Model model;
+    void onFrame() override {
+        updateModel(model);
+        models.push(model);
+    }
+    void onLoad() override {}
+};
+
+glm::vec3 getMouseWorld(
+    float mouseX, float mouseY,
+    const glm::mat4& view,
+    const glm::mat4& proj
+) {
+    glm::vec4 viewport(0, 0, WIDTH, HEIGHT);
+
+    glm::vec3 nearPoint = glm::unProject(glm::vec3(mouseX, HEIGHT - mouseY, 0.0f), view, proj, viewport);
+    glm::vec3 farPoint  = glm::unProject(glm::vec3(mouseX, HEIGHT - mouseY, 1.0f), view, proj, viewport);
+    
+    glm::vec3 dir = farPoint - nearPoint;
+
+    float t = -nearPoint.y / dir.y;
+    return nearPoint + t * dir;
 }
 
 struct Player : Entity
@@ -80,10 +92,12 @@ struct Player : Entity
     Moveable moveable;
     void onFrame() override
     {
-        glm::vec4 b = glm::vec4(toScreenSpace(getInput()->keyboardInput.mousePos), 0.0, 1.0);
-        printf("%f %f\n", b.x, b.y);
-       // moveable.targetPosition = b;
-        // moveable.targetPosition = model.material.uniforms.projectionMatrix * model.material.uniforms.viewMatrix * b;
+        if (getInput()->keyboardInput.fresh)
+        {
+            glm::vec2 mousePos = glm::vec2(getInput()->keyboardInput.mousePos);
+            moveable.targetPosition = getMouseWorld(mousePos.x, mousePos.y, model.material.uniforms.viewMatrix, model.material.uniforms.projectionMatrix);
+        }
+
         move(moveable, model.position);
         updateModel(model);
         models.push(model);
@@ -119,7 +133,7 @@ void move(const Moveable &moveable, glm::vec3 &position)
 void updateModel(Model &model)
 {
     Uniforms uniforms = model.material.uniforms;
-    model.material.uniforms.modelMatrix = glm::scale(glm::mat4x4(1.0), model.scale) * glm::translate(glm::mat4x4(1.0), model.position);
+    model.material.uniforms.modelMatrix = glm::scale(glm::mat4x4(1.0), model.scale) * glm::translate(glm::mat4x4(1.0), model.position) * glm::translate(glm::mat4x4(1.0), model.offset);
 }
 
 Uniforms getDefaultUniforms()
@@ -135,7 +149,7 @@ Uniforms getDefaultUniforms()
     float far = 100.0f;
     uniforms.modelMatrix = glm::mat4x4(1.0);
 
-    glm::vec3 cameraPosition = glm::vec3(0.0f, 0.0f, 10.0f);
+    glm::vec3 cameraPosition = glm::vec3(4.0f, 10.0f, 10.0f);
     glm::vec3 targetPosition = glm::vec3(0.0f, 0.0f, 0.0f);
     glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
     uniforms.viewMatrix = glm::lookAt(cameraPosition, targetPosition, upVector);

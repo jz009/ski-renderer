@@ -45,5 +45,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
 	// Gamma-correction
 	let corrected_color = pow(color, vec3f(2.2));
-	return vec4f(corrected_color, uUniforms.color.a);
+	//return vec4f(corrected_color, uUniforms.color.a);
+	return vec4f(uUniforms.color);
 }
