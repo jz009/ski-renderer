@@ -107,13 +107,15 @@ struct Player : Entity
 
 struct Camera
 {
-    glm::vec3 cameraPos;
-    glm::vec3 targetPos;
+    glm::vec3 position;
+    glm::vec3 target;
+    glm::vec3 up;
 
     Camera::Camera()
     {
-        cameraPos = glm::vec3(3.0f, 15.0f, 10.0f);
-        targetPos = glm::vec3(0.0f, 3.0f, 0.0f);
+        position = glm::vec3(4.0f, 10.0f, 10.0f);
+        target = glm::vec3(0.0f, 0.0f, 0.0f);
+        up = glm::vec3(0.0f, 1.0f, 0.0f);
     }
     Camera(const Camera &) = delete;
     Camera operator=(const Camera &) const = delete;
@@ -122,12 +124,6 @@ struct Camera
 void move(const Moveable &moveable, glm::vec3 &position)
 {
     position = glm::mix(position, moveable.targetPosition, 0.05f);
-    // if (glm::length(position - moveable.targetPosition) > 1.0)
-    // {
-    //     glm::vec3 direction = glm::normalize(position - moveable.targetPosition);
-    //     step = direction * moveable.speed;
-    //     position += step;
-    // }
 }
 
 void updateModel(Model &model)
@@ -148,11 +144,8 @@ Uniforms getDefaultUniforms()
     float near = 0.01f;
     float far = 100.0f;
     uniforms.modelMatrix = glm::mat4x4(1.0);
-
-    glm::vec3 cameraPosition = glm::vec3(4.0f, 10.0f, 10.0f);
-    glm::vec3 targetPosition = glm::vec3(0.0f, 0.0f, 0.0f);
-    glm::vec3 upVector = glm::vec3(0.0f, 1.0f, 0.0f);
-    uniforms.viewMatrix = glm::lookAt(cameraPosition, targetPosition, upVector);
+    Camera camera;
+    uniforms.viewMatrix = glm::lookAt(camera.position, camera.target, camera.up);
 
     float fov = 2 * glm::atan(1 / focalLength);
     uniforms.projectionMatrix = glm::perspective(fov, ratio, near, far);

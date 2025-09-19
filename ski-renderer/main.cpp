@@ -20,6 +20,8 @@
 #include "shared.h"
 #include "input.h"
 
+#define createEntity(t) std::make_unique<t>();
+
 int main()
 {
 	Renderer renderer;
@@ -28,12 +30,13 @@ int main()
 	int count = 0;
 
 	std::vector<std::unique_ptr<Entity>> entities;
-	std::unique_ptr<Player> player = std::make_unique<Player>();
-	std::unique_ptr<Terrain> terrain = std::make_unique<Terrain>();
+	auto player = createEntity(Player)
+	auto terrain = createEntity(Terrain);
 	terrain->model = renderer.createModel3D(mCUBE, sDEFAULT, getDefaultUniforms());
 	terrain->model.scale = {100.0, 1.0, 100.0};
 	terrain->model.material.uniforms.color = {1.0, 0.0, 0.0, 1.0};
-	terrain->model.position = {0.0, -1.0, 0.0};
+	terrain->model.position = {0.0, 0.0, 0.0};
+	terrain->model.offset = {0.0, -1.0, 0.0};
 	player->model = renderer.createModel3D(mCUBE, sDEFAULT, getDefaultUniforms());
 	player->moveable.targetPosition = glm::vec3(0.0, 0.0, 0.0);
 	player->model.offset = glm::vec3(0.0, 0.5, 0.0);

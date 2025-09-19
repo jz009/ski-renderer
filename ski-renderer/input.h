@@ -49,7 +49,8 @@ void mouseButtonCallback(GLFWwindow *window, int button, int action, int mods)
         input->onMouseClick(button, action, mods);
 }
 
-void Input::clear() {
+void Input::clear()
+{
     keyboardInput.fresh = false;
     mouseInput.fresh = false;
 }
@@ -90,7 +91,8 @@ void Input::init(GLFWwindow *window_)
     glfwSetKeyCallback(window, keyCallback);
 }
 
-Input* getInput() {
+Input *getInput()
+{
     static Input INPUT(nullptr);
     return &INPUT;
 }
