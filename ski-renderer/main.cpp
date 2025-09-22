@@ -30,8 +30,8 @@ int main()
 	int count = 0;
 
 	std::vector<std::unique_ptr<Entity>> entities;
-	auto player = createEntity(Player)
-	auto terrain = createEntity(Terrain);
+	auto player = std::make_unique<Player>();
+	auto terrain = std::make_unique<Terrain>();
 	terrain->model = renderer.createModel3D(mCUBE, sDEFAULT, getDefaultUniforms());
 	terrain->model.scale = {100.0, 1.0, 100.0};
 	terrain->model.material.uniforms.color = {1.0, 0.0, 0.0, 1.0};

@@ -225,7 +225,6 @@ bool Renderer::isRunning()
 
 wgpu::TextureView Renderer::getNextSurfaceTextureView()
 {
-    // Get the surface texture
     wgpu::SurfaceTexture surfaceTexture;
     wgpuSurfaceGetCurrentTexture(surface, &surfaceTexture);
     if (surfaceTexture.status != wgpu::SurfaceGetCurrentTextureStatus::Success)
@@ -233,7 +232,6 @@ wgpu::TextureView Renderer::getNextSurfaceTextureView()
         return nullptr;
     }
 
-    // Create a view for this surface texture
     wgpu::TextureViewDescriptor viewDescriptor;
     viewDescriptor.nextInChain = nullptr;
     viewDescriptor.label = "Surface texture view";
@@ -247,10 +245,8 @@ wgpu::TextureView Renderer::getNextSurfaceTextureView()
     targetView = wgpuTextureCreateView(surfaceTexture.texture, &viewDescriptor);
 
 #ifndef WEBGPU_BACKEND_WGPU
-    // We no longer need the texture, only its view
-    // (NB: with wgpu-native, surface textures must not be manually released)
     wgpuTextureRelease(surfaceTexture.texture);
-#endif // WEBGPU_BACKEND_WGPU
+#endif 
 
     return targetView;
 }
@@ -346,10 +342,9 @@ std::vector<VertexAttributes> Renderer::loadObj(const std::filesystem::path &geo
 
             vertexData[offset + i].position = {
                 attrib.vertices[3 * idx.vertex_index + 0],
-                -attrib.vertices[3 * idx.vertex_index + 2], // Add a minus to avoid mirroring
+                -attrib.vertices[3 * idx.vertex_index + 2],
                 attrib.vertices[3 * idx.vertex_index + 1]};
 
-            // Also apply the transform to normals!!
             vertexData[offset + i].normal = {
                 attrib.normals[3 * idx.normal_index + 0],
                 -attrib.normals[3 * idx.normal_index + 2],
@@ -384,7 +379,6 @@ std::vector<VertexAttributes> Renderer::load2D(const std::filesystem::path &geom
     {
         getline(file, line);
 
-        // overcome the `CRLF` problem
         if (!line.empty() && line.back() == '\r')
         {
             line.pop_back();
@@ -400,7 +394,6 @@ std::vector<VertexAttributes> Renderer::load2D(const std::filesystem::path &geom
         }
         else if (line[0] == '#' || line.empty())
         {
-            // Do nothing, this is a comment
         }
         else if (currentSection == Section::Points)
         {
