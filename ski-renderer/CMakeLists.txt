@@ -6,13 +6,13 @@ project(
 )
 
 if (NOT EMSCRIPTEN)
-	add_subdirectory(glfw)
+	add_subdirectory(external/glfw)
 else()
-	add_library(glfw INTERFACE)
-	target_link_options(glfw INTERFACE -sUSE_GLFW=3)
+	add_library(external/glfw INTERFACE)
+	target_link_options(external/glfw INTERFACE -sUSE_GLFW=3)
 endif()
 
-add_subdirectory(webgpu)
+add_subdirectory(external/webgpu)
 
 add_executable(App
 	main.cpp

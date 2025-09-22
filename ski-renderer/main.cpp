@@ -3,8 +3,8 @@
 
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_LEFT_HANDED
-#include "glm/glm.hpp"
-#include "glm/ext.hpp"
+#include "external/glm/glm.hpp"
+#include "external/glm/ext.hpp"
 
 #include <math.h>
 
@@ -20,7 +20,6 @@
 #include "shared.h"
 #include "input.h"
 
-#define createEntity(t) std::make_unique<t>();
 
 int main()
 {

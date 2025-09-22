@@ -4,15 +4,15 @@
 #define WEBGPU_CPP_IMPLEMENTATION
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #define GLM_FORCE_LEFT_HANDED
-#include "glm/glm.hpp"
-#include "glm/ext.hpp"
+#include "external/glm/glm.hpp"
+#include "external/glm/ext.hpp"
 
 #include <cmath>
 #include <fstream>
 #include <sstream>
 #include <optional>
 #define TINYOBJLOADER_IMPLEMENTATION
-#include "tiny_obj_loader.h"
+#include "external/tiny_obj_loader.h"
 
 #include <webgpu/webgpu.hpp>
 
@@ -87,7 +87,8 @@ private:
     wgpu::Adapter requestAdapterSync(WGPUInstance instance, WGPURequestAdapterOptions const *options);
     wgpu::Device requestDeviceSync(WGPUAdapter adapter, WGPUDeviceDescriptor const *descriptor);
 
-        private : wgpu::Device device;
+private:
+    wgpu::Device device;
     wgpu::Queue queue;
     wgpu::Surface surface;
     wgpu::TextureFormat surfaceFormat = wgpu::TextureFormat::Undefined;
@@ -246,7 +247,7 @@ wgpu::TextureView Renderer::getNextSurfaceTextureView()
 
 #ifndef WEBGPU_BACKEND_WGPU
     wgpuTextureRelease(surfaceTexture.texture);
-#endif 
+#endif
 
     return targetView;
 }
