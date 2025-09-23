@@ -20,6 +20,7 @@ struct MouseInput
     int mods;
     glm::vec2 mousePos;
 };
+
 struct Input
 {
 public:

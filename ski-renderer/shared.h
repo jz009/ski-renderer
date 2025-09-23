@@ -63,7 +63,8 @@ void move(const Moveable &moveable, glm::vec3 &position);
 struct Terrain : Entity
 {
     Model model;
-    void onFrame() override {
+    void onFrame() override
+    {
         updateModel(model);
         models.push(model);
     }
@@ -72,14 +73,14 @@ struct Terrain : Entity
 
 glm::vec3 getMouseWorld(
     float mouseX, float mouseY,
-    const glm::mat4& view,
-    const glm::mat4& proj
-) {
+    const glm::mat4 &view,
+    const glm::mat4 &proj)
+{
     glm::vec4 viewport(0, 0, WIDTH, HEIGHT);
 
     glm::vec3 nearPoint = glm::unProject(glm::vec3(mouseX, HEIGHT - mouseY, 0.0f), view, proj, viewport);
-    glm::vec3 farPoint  = glm::unProject(glm::vec3(mouseX, HEIGHT - mouseY, 1.0f), view, proj, viewport);
-    
+    glm::vec3 farPoint = glm::unProject(glm::vec3(mouseX, HEIGHT - mouseY, 1.0f), view, proj, viewport);
+
     glm::vec3 dir = farPoint - nearPoint;
 
     float t = -nearPoint.y / dir.y;
@@ -110,12 +111,20 @@ struct Camera
     glm::vec3 position;
     glm::vec3 target;
     glm::vec3 up;
+    float ratio;
+    float focalLength;
+    float near;
+    float far;
 
     Camera::Camera()
     {
         position = glm::vec3(4.0f, 10.0f, 10.0f);
         target = glm::vec3(0.0f, 0.0f, 0.0f);
         up = glm::vec3(0.0f, 1.0f, 0.0f);
+        ratio = (float)WIDTH / (float)HEIGHT;
+        focalLength = 1.0;
+        near = 0.01f;
+        far = 100.0f;
     }
     Camera(const Camera &) = delete;
     Camera operator=(const Camera &) const = delete;
@@ -134,20 +143,16 @@ void updateModel(Model &model)
 
 Uniforms getDefaultUniforms()
 {
+    Camera camera;
     Uniforms uniforms;
+
+    float fov = 2 * glm::atan(1 / camera.focalLength);
+
     uniforms.time = static_cast<float>(glfwGetTime());
     uniforms.color = {0.0f, 1.0f, 0.4f, 1.0f};
-
-    glm::vec3 focalPoint(0.0, 0.0, -2.0);
-    float ratio = (float)WIDTH / (float)HEIGHT;
-    float focalLength = 1.0;
-    float near = 0.01f;
-    float far = 100.0f;
     uniforms.modelMatrix = glm::mat4x4(1.0);
-    Camera camera;
     uniforms.viewMatrix = glm::lookAt(camera.position, camera.target, camera.up);
+    uniforms.projectionMatrix = glm::perspective(fov, camera.ratio, camera.near, camera.far);
 
-    float fov = 2 * glm::atan(1 / focalLength);
-    uniforms.projectionMatrix = glm::perspective(fov, ratio, near, far);
     return uniforms;
 }
