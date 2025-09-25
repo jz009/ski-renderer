@@ -39,8 +39,8 @@ int main()
 	player->model = renderer.createModel3D(mCUBE, sDEFAULT, getDefaultUniforms());
 	player->moveable.targetPosition = glm::vec3(0.0, 0.0, 0.0);
 	player->model.offset = glm::vec3(0.0, 0.5, 0.0);
-	entities.push_back(std::move(player));
 	entities.push_back(std::move(terrain));
+	entities.push_back(std::move(player));
 
 	while (renderer.isRunning())
 	{
@@ -53,7 +53,7 @@ int main()
 		while (!models.empty())
 		{
 			renderer.draw(models.front());
-			models.pop();
+			models.pop_front();
 		}
 		renderer.endFrame();
 		getInput()->clear();

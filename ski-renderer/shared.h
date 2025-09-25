@@ -10,6 +10,11 @@ uint32_t HEIGHT = 1000;
 std::filesystem::path mCUBE = "models/cube.obj";
 std::filesystem::path sDEFAULT = "shaders/shader.wgsl";
 
+void printVec(glm::vec3 vec)
+{
+    printf("%f, %f, %f\n", vec.x, vec.y, vec.z);
+}
+
 struct Uniforms
 {
     glm::mat4x4 projectionMatrix;
@@ -33,6 +38,21 @@ struct Entity
     virtual void onLoad() {}
 };
 
+struct AABB
+{
+    float minX;
+    float maxX;
+    float minY;
+    float maxY;
+    float minZ;
+    float maxZ;
+};
+
+void printAABB(AABB aabb)
+{
+    printf("%f, %f, %f, %f, %f, %f\n", aabb.minX, aabb.maxX, aabb.minY, aabb.maxY, aabb.minZ, aabb.maxZ);
+}
+
 struct Material
 {
     wgpu::ShaderModule shader;
@@ -44,6 +64,8 @@ struct Model
     wgpu::Buffer buffer;
     uint32_t vertexCount;
     Material material;
+    AABB box;
+    AABB adjustedBox;
     glm::vec3 scale = {1.0, 1.0, 1.0};
     glm::vec3 rotation;
     glm::vec3 position;
@@ -56,7 +78,17 @@ struct Moveable
     glm::vec3 targetPosition;
 };
 
-std::queue<Model> models;
+void adjustAABB(Model &model)
+{
+    model.adjustedBox.maxX = model.box.maxX * model.scale.x + model.offset.x;
+    model.adjustedBox.minX = model.box.minX * model.scale.x + model.offset.x;
+    model.adjustedBox.maxY = model.box.maxY * model.scale.y + model.offset.y;
+    model.adjustedBox.minX = model.box.minX * model.scale.y + model.offset.y;
+    model.adjustedBox.maxZ = model.box.maxZ * model.scale.z + model.offset.z;
+    model.adjustedBox.minZ = model.box.minZ * model.scale.z + model.offset.z;
+}
+
+std::deque<Model> models;
 void updateModel(Model &model);
 void move(const Moveable &moveable, glm::vec3 &position);
 
@@ -66,10 +98,15 @@ struct Terrain : Entity
     void onFrame() override
     {
         updateModel(model);
-        models.push(model);
+        models.push_front(model);
     }
     void onLoad() override {}
 };
+
+std::deque<Model> getModels()
+{
+    return models;
+}
 
 glm::vec3 getMouseWorld(
     float mouseX, float mouseY,
@@ -87,6 +124,17 @@ glm::vec3 getMouseWorld(
     return nearPoint + t * dir;
 }
 
+bool pointInAABB(glm::vec3 point, AABB box)
+{
+    return (
+        point.x >= box.minX &&
+        point.x <= box.maxX &&
+        point.y >= box.minY &&
+        point.y <= box.maxY &&
+        point.z >= box.minZ &&
+        point.z <= box.maxZ);
+}
+
 struct Player : Entity
 {
     Model model;
@@ -96,12 +144,22 @@ struct Player : Entity
         if (getInput()->keyboardInput.fresh)
         {
             glm::vec2 mousePos = glm::vec2(getInput()->keyboardInput.mousePos);
-            moveable.targetPosition = getMouseWorld(mousePos.x, mousePos.y, model.material.uniforms.viewMatrix, model.material.uniforms.projectionMatrix);
+            auto clickLocation = getMouseWorld(mousePos.x, mousePos.y, model.material.uniforms.viewMatrix, model.material.uniforms.projectionMatrix);
+            for (Model m : getModels())
+            {
+                printVec(clickLocation);
+                printAABB(m.adjustedBox);
+                if (pointInAABB(clickLocation - glm::vec3(0.0, -0.1, 0.0), m.adjustedBox))
+                {
+                    moveable.targetPosition = clickLocation;
+                    break;
+                }
+            }
         }
 
         move(moveable, model.position);
         updateModel(model);
-        models.push(model);
+        models.push_front(model);
     }
     void onLoad() override {}
 };
@@ -138,6 +196,7 @@ void move(const Moveable &moveable, glm::vec3 &position)
 void updateModel(Model &model)
 {
     Uniforms uniforms = model.material.uniforms;
+    adjustAABB(model);
     model.material.uniforms.modelMatrix = glm::scale(glm::mat4x4(1.0), model.scale) * glm::translate(glm::mat4x4(1.0), model.position) * glm::translate(glm::mat4x4(1.0), model.offset);
 }
 

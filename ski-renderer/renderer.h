@@ -30,6 +30,7 @@
 #include <corecrt_math_defines.h>
 #include <unordered_map>
 #include "shared.h"
+#include <limits>
 
 struct Renderer
 {
@@ -82,8 +83,6 @@ private:
     wgpu::ShaderModule createShaderModule(std::filesystem::path shaderPath);
     void createPipeline(wgpu::ShaderModule shaderModule);
 
-    std::vector<VertexAttributes> loadObj(const std::filesystem::path &geometry);
-    std::vector<VertexAttributes> load2D(const std::filesystem::path &geometry);
     wgpu::Adapter requestAdapterSync(WGPUInstance instance, WGPURequestAdapterOptions const *options);
     wgpu::Device requestDeviceSync(WGPUAdapter adapter, WGPUDeviceDescriptor const *descriptor);
 
@@ -320,7 +319,7 @@ void Renderer::initializePipelineDefaults()
     pipelineDefaults.defaultLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineDefaults.defaultPipelineLayoutDescriptor);
 }
 
-std::vector<VertexAttributes> Renderer::loadObj(const std::filesystem::path &geometry)
+std::vector<VertexAttributes> loadObj(const std::filesystem::path &geometry, AABB &box)
 {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -332,6 +331,8 @@ std::vector<VertexAttributes> Renderer::loadObj(const std::filesystem::path &geo
 
     tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, geometry.string().c_str());
     vertexData.clear();
+    float minX = std::numeric_limits<float>::max(), minY = std::numeric_limits<float>::max(), minZ = std::numeric_limits<float>::max();
+    float maxX = std::numeric_limits<float>::lowest(), maxY = std::numeric_limits<float>::lowest(), maxZ = std::numeric_limits<float>::lowest();
     for (const auto &shape : shapes)
     {
         size_t offset = vertexData.size();
@@ -340,11 +341,33 @@ std::vector<VertexAttributes> Renderer::loadObj(const std::filesystem::path &geo
         for (size_t i = 0; i < shape.mesh.indices.size(); ++i)
         {
             const tinyobj::index_t &idx = shape.mesh.indices[i];
+            auto x = attrib.vertices[3 * idx.vertex_index + 0];
+            auto y = attrib.vertices[3 * idx.vertex_index + 1];
+            auto z = attrib.vertices[3 * idx.vertex_index + 2];
+            auto min = [] (auto a, auto b) {
+                if (a < b) 
+                    return a;
+                else 
+                    return b;
+            };
+            auto max = [] (auto a, auto b) {
+                if (a > b) 
+                    return a;
+                else 
+                    return b;
+            };
+            minX = min(x, minX);
+            minY = min(-y, minY);
+            minZ = min(z, minZ);
+            maxX = max(x, maxX);
+            maxY = max(-y, maxY);
+            maxZ = max(z, maxZ);
+           
 
             vertexData[offset + i].position = {
-                attrib.vertices[3 * idx.vertex_index + 0],
-                -attrib.vertices[3 * idx.vertex_index + 2],
-                attrib.vertices[3 * idx.vertex_index + 1]};
+                x,
+                -y,
+                z};
 
             vertexData[offset + i].normal = {
                 attrib.normals[3 * idx.normal_index + 0],
@@ -357,10 +380,11 @@ std::vector<VertexAttributes> Renderer::loadObj(const std::filesystem::path &geo
                 attrib.colors[3 * idx.vertex_index + 2]};
         }
     }
+    box = {minX, maxX, minY, maxY, minZ, maxZ};
     return vertexData;
 }
 
-std::vector<VertexAttributes> Renderer::load2D(const std::filesystem::path &geometry)
+std::vector<VertexAttributes> load2D(const std::filesystem::path &geometry)
 {
     std::vector<VertexAttributes> vertexData;
 
@@ -425,7 +449,8 @@ Model Renderer::createModel2D(const std::filesystem::path &geometry, const std::
 
 Model Renderer::createModel3D(const std::filesystem::path &geometry, const std::filesystem::path &shaderPath, const Uniforms &uniforms)
 {
-    std::vector<VertexAttributes> vertexData = loadObj(geometry);
+    AABB box;
+    std::vector<VertexAttributes> vertexData = loadObj(geometry, box);
     wgpu::BufferDescriptor bufferDesc;
     bufferDesc.size = vertexData.size() * sizeof(VertexAttributes);
     bufferDesc.usage = wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex;
@@ -437,7 +462,7 @@ Model Renderer::createModel3D(const std::filesystem::path &geometry, const std::
 
     uint32_t vertexCount = static_cast<int>(vertexData.size());
 
-    return Model{vertexBuffer, vertexCount, {shader, uniforms}};
+    return Model{vertexBuffer, vertexCount, {shader, uniforms}, box};
 }
 
 void Renderer::writeUniformBuffer(const Material &material)
