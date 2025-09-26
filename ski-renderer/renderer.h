@@ -331,8 +331,8 @@ std::vector<VertexAttributes> loadObj(const std::filesystem::path &geometry, AAB
 
     tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, geometry.string().c_str());
     vertexData.clear();
-    float minX = std::numeric_limits<float>::max(), minY = std::numeric_limits<float>::max(), minZ = std::numeric_limits<float>::max();
-    float maxX = std::numeric_limits<float>::lowest(), maxY = std::numeric_limits<float>::lowest(), maxZ = std::numeric_limits<float>::lowest();
+    glm::vec3 min = {std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()};
+    glm::vec3 max = {std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest()};
     for (const auto &shape : shapes)
     {
         size_t offset = vertexData.size();
@@ -344,24 +344,13 @@ std::vector<VertexAttributes> loadObj(const std::filesystem::path &geometry, AAB
             auto x = attrib.vertices[3 * idx.vertex_index + 0];
             auto y = attrib.vertices[3 * idx.vertex_index + 1];
             auto z = attrib.vertices[3 * idx.vertex_index + 2];
-            auto min = [] (auto a, auto b) {
-                if (a < b) 
-                    return a;
-                else 
-                    return b;
-            };
-            auto max = [] (auto a, auto b) {
-                if (a > b) 
-                    return a;
-                else 
-                    return b;
-            };
-            minX = min(x, minX);
-            minY = min(-y, minY);
-            minZ = min(z, minZ);
-            maxX = max(x, maxX);
-            maxY = max(-y, maxY);
-            maxZ = max(z, maxZ);
+
+            min.x = std::min(x, min.x);
+            min.y = std::min(-y, min.y);
+            min.z = std::min(z, min.z);
+            max.x = std::max(x, max.x);
+            max.y = std::max(-y, max.y);
+            max.z = std::max(z, max.z);
            
 
             vertexData[offset + i].position = {
@@ -380,7 +369,7 @@ std::vector<VertexAttributes> loadObj(const std::filesystem::path &geometry, AAB
                 attrib.colors[3 * idx.vertex_index + 2]};
         }
     }
-    box = {minX, maxX, minY, maxY, minZ, maxZ};
+    box = {min, max};
     return vertexData;
 }
 
