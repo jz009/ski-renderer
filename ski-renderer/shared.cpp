@@ -1,0 +1,156 @@
+#pragma once
+#include "includes_fwd.h"
+#include "shared.h"
+
+const std::string Constants::mCUBE = "models/cube.obj";
+const std::string Constants::sDEFAULT = "shaders/shader.wgsl";
+
+glm::vec3 getMouseWorld(
+    float mouseX, float mouseY,
+    const glm::mat4 &view,
+    const glm::mat4 &proj)
+{
+    glm::vec4 viewport(0, 0, Constants::WIDTH, Constants::HEIGHT);
+
+    glm::vec3 nearPoint = glm::unProject(glm::vec3(mouseX, Constants::HEIGHT - mouseY, 0.0f), view, proj, viewport);
+    glm::vec3 farPoint = glm::unProject(glm::vec3(mouseX, Constants::HEIGHT - mouseY, 1.0f), view, proj, viewport);
+
+    glm::vec3 dir = farPoint - nearPoint;
+
+    float t = -nearPoint.y / dir.y;
+    return nearPoint + t * dir;
+}
+
+Camera::Camera()
+{
+    position = glm::vec3(4.0f, 10.0f, 10.0f);
+    target = glm::vec3(0.0f, 0.0f, 0.0f);
+    up = glm::vec3(0.0f, 1.0f, 0.0f);
+    ratio = (float)Constants::WIDTH / (float)Constants::HEIGHT;
+    focalLength = 1.0;
+    near = 0.01f;
+    far = 100.0f;
+}
+
+// void adjustAABB(Model &model)
+// {
+//     model.adjustedBox.min = glm::vec3(glm::vec4(model.box.min, 0) * glm::scale(glm::mat4x4(1.0), model.scale) * glm::translate(glm::mat4x4(1.0), model.position) * glm::translate(glm::mat4x4(1.0), model.offset));
+//     model.adjustedBox.max = glm::vec3(glm::vec4(model.box.max, 0) * glm::scale(glm::mat4x4(1.0), model.scale) * glm::translate(glm::mat4x4(1.0), model.position) * glm::translate(glm::mat4x4(1.0), model.offset));
+// }
+
+void move(const Movement &movement, glm::vec3 &position)
+{
+    position = glm::mix(position, movement.targetPosition, 0.05f);
+}
+
+// void updateModel(Model &model)
+// {
+//     Uniforms uniforms = model.material.uniforms;
+//     //adjustAABB(model);
+//     model.material.uniforms.modelMatrix = glm::scale(glm::mat4x4(1.0), model.scale) * glm::translate(glm::mat4x4(1.0), model.position) * glm::translate(glm::mat4x4(1.0), model.offset);
+// }
+
+ObjResult loadObj(const std::filesystem::path &geometry)
+{
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+
+    std::string warn;
+    std::string err;
+    std::vector<VertexAttributes> vertexData;
+
+    tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, geometry.string().c_str());
+    vertexData.clear();
+    glm::vec3 min = {std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()};
+    glm::vec3 max = {std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest()};
+    for (const auto &shape : shapes)
+    {
+        size_t offset = vertexData.size();
+        vertexData.resize(offset + shape.mesh.indices.size());
+
+        for (size_t i = 0; i < shape.mesh.indices.size(); ++i)
+        {
+            const tinyobj::index_t &idx = shape.mesh.indices[i];
+            auto x = attrib.vertices[3 * idx.vertex_index + 0];
+            auto y = attrib.vertices[3 * idx.vertex_index + 1];
+            auto z = attrib.vertices[3 * idx.vertex_index + 2];
+
+            min.x = std::min(x, min.x);
+            min.y = std::min(-y, min.y);
+            min.z = std::min(z, min.z);
+            max.x = std::max(x, max.x);
+            max.y = std::max(-y, max.y);
+            max.z = std::max(z, max.z);
+
+            vertexData[offset + i].position = {
+                x,
+                -y,
+                z};
+
+            vertexData[offset + i].normal = {
+                attrib.normals[3 * idx.normal_index + 0],
+                -attrib.normals[3 * idx.normal_index + 2],
+                attrib.normals[3 * idx.normal_index + 1]};
+
+            vertexData[offset + i].color = {
+                attrib.colors[3 * idx.vertex_index + 0],
+                attrib.colors[3 * idx.vertex_index + 1],
+                attrib.colors[3 * idx.vertex_index + 2]};
+        }
+    }
+    return ObjResult{vertexData, {min, max}};
+}
+
+std::vector<VertexAttributes> load2D(const std::filesystem::path &geometry)
+{
+    std::vector<VertexAttributes> vertexData;
+
+    std::ifstream file(geometry);
+
+    enum class Section
+    {
+        None,
+        Points,
+        Indices,
+    };
+    Section currentSection = Section::None;
+
+    float x, y, z;
+    std::string line;
+    while (!file.eof())
+    {
+        getline(file, line);
+
+        if (!line.empty() && line.back() == '\r')
+        {
+            line.pop_back();
+        }
+
+        if (line == "[points]")
+        {
+            currentSection = Section::Points;
+        }
+        else if (line == "[indices]")
+        {
+            currentSection = Section::Indices;
+        }
+        else if (line[0] == '#' || line.empty())
+        {
+        }
+        else if (currentSection == Section::Points)
+        {
+            std::istringstream iss(line);
+            iss >> x >> y >> z;
+            vertexData.push_back({glm::vec3(x, y, z), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0)});
+        }
+    }
+    return vertexData;
+}
+
+void printVec(glm::vec3 vec)
+{
+    printf("%f, %f, %f\n", vec.x, vec.y, vec.z);
+}
+
+std::deque<Model> models;
