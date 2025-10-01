@@ -1,7 +1,6 @@
 #pragma once
 #define WEBGPU_CPP_IMPLEMENTATION
 #define TINYOBJLOADER_IMPLEMENTATION
-// #include "includes_fwd.h"
 
 #include "shared.h"
 #include "renderer.h"
@@ -23,41 +22,35 @@ int main()
 	Material basic = renderer.createMaterial(Constants::sDEFAULT, Uniforms());
 	ObjResult objResult = loadObj(Constants::mCUBE);
 	Model cube = renderer.createModel(objResult.vertexData, basic);
-	terrain->model = cube;
-	terrain->transform = Transform(glm::vec3(100.0, 1.0, 100.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0));
 
 	player->model = cube;
 	player->transform = Transform(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.5, 0.0));
 
-	// // terrain->model = renderer.createModel(mCUBE, sDEFAULT, getDefaultUniforms());
-	// // terrain->model.scale = {100.0, 1.0, 100.0};
-	// // terrain->model.material.uniforms.color = {1.0, 0.0, 0.0, 1.0};
-	// // terrain->model.position = {0.0, 0.0, 0.0};
-	// // terrain->model.offset = {0.0, -1.0, 0.0};
-	// // player->model = renderer.createModel3D(mCUBE, sDEFAULT, getDefaultUniforms());
-	// // player->moveable.targetPosition = glm::vec3(0.0, 0.0, 0.0);
-	// // player->model.offset = glm::vec3(0.0, 0.5, 0.0);
-	// // entities.push_back(std::move(terrain));
-	// // entities.push_back(std::move(player));
+	terrain->model = cube;
+	terrain->transform = Transform(glm::vec3(100.0, 1.0, 100.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0));
+	terrain->model.material.uniforms.color = {1.0, 0.0, 0.0, 1.0};
 
-	// while (renderer.isRunning())
-	// {
-	// 	count = count + 1;
-	// 	renderer.beginFrame();
-	// 	for (auto& entity : entities)
-	// 	{
-	// 		entity->onFrame();
-	// 	}
-	// 	while (!models.empty())
-	// 	{
-	// 		renderer.draw(models.front());
-	// 		models.pop_front();
-	// 	}
-	// 	renderer.endFrame();
-	// 	getInput()->clear();
-	// }
+	scene.entities.push_back(std::move(terrain));
+	scene.entities.push_back(std::move(player));
+	
 
-	// renderer.terminate();
+	while (renderer.isRunning())
+	{
+		count = count + 1;
+		renderer.beginFrame();
+		for (auto& entity : scene.entities)
+		{
+			entity->onFrame();
+			auto model = entity->getModel();
+			if (model) {
+				renderer.draw(*model);
+			}
+		}
+		renderer.endFrame();
+		getInput()->clear();
+	}
+
+	renderer.terminate();
 
 	return 0;
 }

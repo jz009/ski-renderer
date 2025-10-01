@@ -38,17 +38,10 @@ Camera::Camera()
 //     model.adjustedBox.max = glm::vec3(glm::vec4(model.box.max, 0) * glm::scale(glm::mat4x4(1.0), model.scale) * glm::translate(glm::mat4x4(1.0), model.position) * glm::translate(glm::mat4x4(1.0), model.offset));
 // }
 
-void move(const Movement &movement, glm::vec3 &position)
+glm::vec3 move(const Movement &movement, glm::vec3 position)
 {
-    position = glm::mix(position, movement.targetPosition, 0.05f);
+    return glm::mix(position, movement.targetPosition, 0.05f);
 }
-
-// void updateModel(Model &model)
-// {
-//     Uniforms uniforms = model.material.uniforms;
-//     //adjustAABB(model);
-//     model.material.uniforms.modelMatrix = glm::scale(glm::mat4x4(1.0), model.scale) * glm::translate(glm::mat4x4(1.0), model.position) * glm::translate(glm::mat4x4(1.0), model.offset);
-// }
 
 ObjResult loadObj(const std::filesystem::path &geometry)
 {
@@ -151,6 +144,10 @@ std::vector<VertexAttributes> load2D(const std::filesystem::path &geometry)
 void printVec(glm::vec3 vec)
 {
     printf("%f, %f, %f\n", vec.x, vec.y, vec.z);
+}
+
+void updateTransform(Model &model, const Transform &transform) {
+    model.material.uniforms.modelMatrix = glm::scale(glm::mat4x4(1.0), transform.scale) * glm::translate(glm::mat4x4(1.0), transform.position) * glm::translate(glm::mat4x4(1.0), transform.offset);
 }
 
 std::deque<Model> models;

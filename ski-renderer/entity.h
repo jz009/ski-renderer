@@ -6,24 +6,28 @@
 struct Entity
 {
     bool loaded;
+    Model model;
     virtual void onFrame() {}
     virtual void onLoad() {}
+    virtual std::optional<Model> getModel() {
+        return std::nullopt;
+    }
 };
 
 struct Terrain : Entity
 {
-    Model model;
     Transform transform;
     void onFrame() override
     {
-        //updateModel(model);
-        // models.push_front(model);
+        updateTransform(model, transform);
+    }
+    std::optional<Model> getModel() override {
+        return model;
     }
 };
 
 struct Player : Entity
 {
-    Model model;
     Transform transform;
     Movement movement;
     void onFrame() override
@@ -32,6 +36,7 @@ struct Player : Entity
         {
             glm::vec2 mousePos = glm::vec2(getInput()->keyboardInput.mousePos);
             auto clickLocation = getMouseWorld(mousePos.x, mousePos.y, model.material.uniforms.viewMatrix, model.material.uniforms.projectionMatrix);
+            movement.targetPosition = clickLocation;
             // for (Model m : models)
             // {
             //     // if (pointInAABB(clickLocation - glm::vec3(0.0, -0.1, 0.0), m.adjustedBox))
@@ -42,8 +47,10 @@ struct Player : Entity
             // }
         }
 
-        // move(moveable, model.position);
-        // updateModel(model);
-        //models.push_front(model);
+        transform.position = move(movement, transform.position);
+        updateTransform(model, transform);
+    }
+    std::optional<Model> getModel() override {
+        return model;
     }
 };

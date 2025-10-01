@@ -2,8 +2,6 @@
 
 #include "input.h"
 
-
-
 struct Constants
 {
     static constexpr float D2R = (float)M_PI / 180.f;
@@ -106,8 +104,8 @@ struct Movement
     glm::vec3 targetPosition;
 };
 
-void updateModel(Model &model);
-void move(const Movement &movement, glm::vec3 &position);
+glm::vec3 move(const Movement &movement, glm::vec3 position);
+void updateTransform(Model &model, const Transform &transform);
 ObjResult loadObj(const std::filesystem::path &geometry);
 glm::vec3 getMouseWorld(float mouseX, float mouseY, const glm::mat4 &view, const glm::mat4 &proj);
 std::vector<VertexAttributes> load2D(const std::filesystem::path &geometry);

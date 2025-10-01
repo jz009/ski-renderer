@@ -6,4 +6,6 @@
 
 struct Scene {
     std::vector<std::unique_ptr<Entity>> entities;
+
+    void addEntity(std::unique_ptr<Entity> entity);
 };
