@@ -14,21 +14,26 @@ endif()
 
 add_subdirectory(external/webgpu)
 
-add_executable(App
-	main.cpp
-    utils/glfw3webgpu.c
-	entity.h
-	input.h
-	input.cpp
-	includes_fwd.h
-	renderer.h
-	renderer.cpp
-	shared.h
-	shared.cpp
-	scene.h
+file(GLOB_RECURSE APP_SOURCES
+    CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 )
 
+file(GLOB_RECURSE APP_HEADERS
+    CONFIGURE_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.hpp
+)
+
+add_executable(App ${APP_SOURCES} ${APP_HEADERS})
+
 target_link_libraries(App PRIVATE glfw webgpu)
+
+target_include_directories(App PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/external
+	${CMAKE_CURRENT_SOURCE_DIR}/src
+)
 
 # We add an option to enable different settings when developing the app than
 # when distributing it.

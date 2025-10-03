@@ -24,9 +24,8 @@ struct Uniforms {
 fn vs_main(in: VertexInput) -> VertexOutput {
 	var out: VertexOutput;
 	out.position = uUniforms.projectionMatrix * uUniforms.viewMatrix * uUniforms.modelMatrix * vec4f(in.position, 1.0);
-	// Forward the normal
     out.normal = (uUniforms.modelMatrix * vec4f(in.normal, 0.0)).xyz;
-	out.color = in.color;
+	out.color = uUniforms.color.xyz;
 	return out;
 }
 
@@ -34,10 +33,10 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 	let normal = normalize(in.normal);
 
-	let lightColor1 = vec3f(1.0, 0.9, 0.6);
-	let lightColor2 = vec3f(0.6, 0.9, 1.0);
-	let lightDirection1 = vec3f(0.5, -0.9, 0.1);
-	let lightDirection2 = vec3f(0.2, 0.4, 0.3);
+	let lightColor1 = vec3f(1.0, 0.7, 0.6);
+	let lightColor2 = vec3f(0.6, 0.4, 0.3);
+	let lightDirection1 = vec3f(0.5, 0.2, 0.1);
+	let lightDirection2 = vec3f(-0.2, -1.4, -1.3);
 	let shading1 = max(0.0, dot(lightDirection1, normal));
 	let shading2 = max(0.0, dot(lightDirection2, normal));
 	let shading = shading1 * lightColor1 + shading2 * lightColor2;
@@ -45,6 +44,5 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
 	// Gamma-correction
 	let corrected_color = pow(color, vec3f(2.2));
-	//return vec4f(corrected_color, uUniforms.color.a);
-	return vec4f(uUniforms.color);
+	return vec4f(corrected_color, uUniforms.color.a);
 }

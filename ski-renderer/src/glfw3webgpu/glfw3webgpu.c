@@ -159,4 +159,3 @@ WGPUSurface glfwGetWGPUSurface(WGPUInstance instance, GLFWwindow* window) {
 #error "Unsupported WGPU_TARGET"
 #endif
 }
-

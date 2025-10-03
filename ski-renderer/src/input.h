@@ -25,8 +25,8 @@ struct MouseInput
 struct Input
 {
 public:
-    Input::Input(GLFWwindow *window_);
-    void init(GLFWwindow *window_);
+    Input::Input(GLFWwindow* window_);
+    void init(GLFWwindow* window_);
     void onKeyPress(int key, int scancode, int action, int mods);
     void onMouseClick(int button, int action, int mods);
     void clear();

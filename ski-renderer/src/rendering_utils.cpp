@@ -1,47 +1,10 @@
 #pragma once
 #include "includes_fwd.h"
-#include "shared.h"
 
-const std::string Constants::mCUBE = "models/cube.obj";
-const std::string Constants::sDEFAULT = "shaders/shader.wgsl";
+#include "rendering_utils.h"
 
-glm::vec3 getMouseWorld(
-    float mouseX, float mouseY,
-    const glm::mat4 &view,
-    const glm::mat4 &proj)
-{
-    glm::vec4 viewport(0, 0, Constants::WIDTH, Constants::HEIGHT);
+#include "camera.h"
 
-    glm::vec3 nearPoint = glm::unProject(glm::vec3(mouseX, Constants::HEIGHT - mouseY, 0.0f), view, proj, viewport);
-    glm::vec3 farPoint = glm::unProject(glm::vec3(mouseX, Constants::HEIGHT - mouseY, 1.0f), view, proj, viewport);
-
-    glm::vec3 dir = farPoint - nearPoint;
-
-    float t = -nearPoint.y / dir.y;
-    return nearPoint + t * dir;
-}
-
-Camera::Camera()
-{
-    position = glm::vec3(4.0f, 10.0f, 10.0f);
-    target = glm::vec3(0.0f, 0.0f, 0.0f);
-    up = glm::vec3(0.0f, 1.0f, 0.0f);
-    ratio = (float)Constants::WIDTH / (float)Constants::HEIGHT;
-    focalLength = 1.0;
-    near = 0.01f;
-    far = 100.0f;
-}
-
-// void adjustAABB(Model &model)
-// {
-//     model.adjustedBox.min = glm::vec3(glm::vec4(model.box.min, 0) * glm::scale(glm::mat4x4(1.0), model.scale) * glm::translate(glm::mat4x4(1.0), model.position) * glm::translate(glm::mat4x4(1.0), model.offset));
-//     model.adjustedBox.max = glm::vec3(glm::vec4(model.box.max, 0) * glm::scale(glm::mat4x4(1.0), model.scale) * glm::translate(glm::mat4x4(1.0), model.position) * glm::translate(glm::mat4x4(1.0), model.offset));
-// }
-
-glm::vec3 move(const Movement &movement, glm::vec3 position)
-{
-    return glm::mix(position, movement.targetPosition, 0.05f);
-}
 
 ObjResult loadObj(const std::filesystem::path &geometry)
 {
@@ -141,13 +104,6 @@ std::vector<VertexAttributes> load2D(const std::filesystem::path &geometry)
     return vertexData;
 }
 
-void printVec(glm::vec3 vec)
-{
-    printf("%f, %f, %f\n", vec.x, vec.y, vec.z);
-}
-
-void updateTransform(Model &model, const Transform &transform) {
+void updateModel(Model &model, const Transform &transform) {
     model.material.uniforms.modelMatrix = glm::scale(glm::mat4x4(1.0), transform.scale) * glm::translate(glm::mat4x4(1.0), transform.position) * glm::translate(glm::mat4x4(1.0), transform.offset);
 }
-
-std::deque<Model> models;
