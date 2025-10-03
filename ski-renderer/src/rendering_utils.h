@@ -54,4 +54,4 @@ struct Model
 
 ObjResult loadObj(const std::filesystem::path& geometry);
 std::vector<VertexAttributes> load2D(const std::filesystem::path& geometry);
-void updateModel(Model& model, const Transform& transform);
+void updateModel(Model& model, const Transform& transform, std::shared_ptr<Camera> camera);

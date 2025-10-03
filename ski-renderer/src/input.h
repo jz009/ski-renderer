@@ -12,9 +12,9 @@ struct KeyboardInput
     glm::vec2 mousePos;
 };
 
-struct MouseInput
+struct MouseClickInput
 {
-    MouseInput::MouseInput() = default;
+    MouseClickInput::MouseClickInput() = default;
     bool fresh;
     int button;
     int action;
@@ -24,17 +24,17 @@ struct MouseInput
 
 struct Input
 {
-public:
     Input::Input(GLFWwindow* window_);
     void init(GLFWwindow* window_);
     void onKeyPress(int key, int scancode, int action, int mods);
     void onMouseClick(int button, int action, int mods);
+    void onMouseMove(glm::vec2 mousePos);
     void clear();
-    KeyboardInput keyboardInput = {false};
-    MouseInput mouseInput = {false};
+    KeyboardInput keyboardInput = { false };
+    MouseClickInput mouseClickInput = { false };
+    glm::vec2 mousePosition;
 
-private:
-    GLFWwindow *window;
+    GLFWwindow* window;
 };
 
-Input *getInput();
+Input* getInput();

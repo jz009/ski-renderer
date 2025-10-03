@@ -51,8 +51,13 @@ struct Constants
 
 #ifndef HELPERS
 #define HELPERS
-inline void printVec(glm::vec3 vec)
+inline void printVec3(glm::vec3 vec)
 {
     printf("%f, %f, %f\n", vec.x, vec.y, vec.z);
+}
+
+inline void printVec2(glm::vec2 vec)
+{
+    printf("%f, %f\n", vec.x, vec.y);
 }
 #endif

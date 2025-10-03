@@ -16,12 +16,14 @@ int main()
 	getInput()->init(window);
 	int count = 0;
 
+	auto camera = std::make_shared<CircleBoundCamera>(20.0f);
 	Scene scene;
+	scene.camera = camera;
 	
 	auto player = std::make_shared<Player>();
 	auto terrain = std::make_shared<Terrain>();
 	auto terrain2 = std::make_shared<Terrain>();
-	Material basic = renderer.createMaterial(Constants::sDEFAULT, Uniforms(scene.camera));
+	Material basic = renderer.createMaterial(Constants::sDEFAULT, Uniforms(*scene.camera));
 	ObjResult cubeObj = loadObj(Constants::mCUBE);
 	Model cube = renderer.createModel(cubeObj.vertexData, basic);
 	BoxCollider collider = BoxCollider(cubeObj.box, std::vector{Layer::WALKABLE}, terrain);
@@ -61,6 +63,7 @@ int main()
 		for (auto& c : scene.colliders) {
 			c.onFrame();
 		}
+		scene.camera->onFrame();
 		renderer.endFrame();
 		getInput()->clear();
 	}

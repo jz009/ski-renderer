@@ -1,6 +1,8 @@
 #pragma once
 #include "includes_fwd.h"
 
+glm::vec3 posOnCircle(float& theta, float delta, float radius, float yPos);
+
 struct Camera
 {
     glm::vec3 position;
@@ -22,6 +24,22 @@ struct Camera
         far = 100.0f;
     }
 
-    Camera(const Camera &) = delete;
-    Camera operator=(const Camera &) const = delete;
+    virtual void onFrame() {}
+    void moveCamera(glm::vec3 _position);
+    // Camera(const Camera&) = delete;
+    // Camera operator=(const Camera&) const = delete;
+};
+
+struct CircleBoundCamera : Camera {
+    float thetaPosition;
+    float radius;
+    float speed;
+    CircleBoundCamera::CircleBoundCamera(float _radius)
+    {
+        thetaPosition = 0.0f;
+        radius = _radius;
+        speed = 0.01f;
+        position = posOnCircle(thetaPosition, 0.0f, _radius, position.y);
+    }
+    void onFrame();
 };

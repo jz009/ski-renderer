@@ -26,7 +26,7 @@ struct Terrain : Entity
     void onFrame(Scene& scene) override
     {
         (void)scene;
-        updateModel(model, transform);
+        updateModel(model, transform, scene.camera);
     }
     std::optional<Model> getModel() override {
         return model;
@@ -38,9 +38,9 @@ struct Player : Entity
     Movement movement;
     void onFrame(Scene& scene) override
     {
-        if (getInput()->keyboardInput.fresh)
+        if (getInput()->mouseClickInput.fresh)
         {
-            glm::vec2 mousePos = glm::vec2(getInput()->keyboardInput.mousePos);
+            glm::vec2 mousePos = glm::vec2(getInput()->mouseClickInput.mousePos);
             Raycast ray = getRayFromMouse(mousePos.x, mousePos.y, model.material.uniforms.viewMatrix, model.material.uniforms.projectionMatrix);
             auto colliders = getCollisionsFromRay(ray, scene.colliders, Layer::WALKABLE);
             if (!colliders.empty()) {
@@ -52,7 +52,7 @@ struct Player : Entity
         }
 
         transform.position = move(movement, transform.position);
-        updateModel(model, transform);
+        updateModel(model, transform, scene.camera);
     }
 
     std::optional<Model> getModel() override {
