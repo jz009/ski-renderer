@@ -43,8 +43,12 @@ struct Player : Entity
             glm::vec2 mousePos = glm::vec2(getInput()->keyboardInput.mousePos);
             Raycast ray = getRayFromMouse(mousePos.x, mousePos.y, model.material.uniforms.viewMatrix, model.material.uniforms.projectionMatrix);
             auto colliders = getCollisionsFromRay(ray, scene.colliders, Layer::WALKABLE);
-            if (!colliders.empty())
-                movement.targetPosition = colliders.front().intersection.near;
+            if (!colliders.empty()) {
+                Collision collider = colliders.front();
+                if (std::abs(collider.intersection.near.y - collider.box.max.y) < .001) {
+                    movement.targetPosition = collider.intersection.near;
+                }
+            }
         }
 
         transform.position = move(movement, transform.position);

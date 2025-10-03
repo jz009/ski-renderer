@@ -105,5 +105,5 @@ std::vector<VertexAttributes> load2D(const std::filesystem::path &geometry)
 }
 
 void updateModel(Model &model, const Transform &transform) {
-    model.material.uniforms.modelMatrix = glm::scale(glm::mat4x4(1.0), transform.scale) * glm::translate(glm::mat4x4(1.0), transform.position) * glm::translate(glm::mat4x4(1.0), transform.offset);
+    model.material.uniforms.modelMatrix = glm::translate(glm::mat4x4(1.0), transform.offset) * glm::translate(glm::mat4x4(1.0), transform.position) * glm::scale(glm::mat4x4(1.0), transform.scale);
 }

@@ -20,22 +20,30 @@ int main()
 	
 	auto player = std::make_shared<Player>();
 	auto terrain = std::make_shared<Terrain>();
+	auto terrain2 = std::make_shared<Terrain>();
 	Material basic = renderer.createMaterial(Constants::sDEFAULT, Uniforms(scene.camera));
 	ObjResult cubeObj = loadObj(Constants::mCUBE);
 	Model cube = renderer.createModel(cubeObj.vertexData, basic);
 	BoxCollider collider = BoxCollider(cubeObj.box, std::vector{Layer::WALKABLE}, terrain);
+	BoxCollider collider2 = BoxCollider(cubeObj.box, std::vector{Layer::WALKABLE}, terrain2);
 
 	player->model = cube;
 	player->transform = Transform(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
 	player->model.material.uniforms.color = {0.7f, 0.3f, 0.3f, 1.0};
 
 	terrain->model = cube;
-	terrain->transform = Transform(glm::vec3(10.0, 1.0, 10.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-1.0, -1.0, 0.0));
+	terrain->transform = Transform(glm::vec3(10.0, 1.0, 10.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0));
 	terrain->model.material.uniforms.color = {0.3f, 1.0f, 0.0, 1.0};
+
+	terrain2->model = cube;
+	terrain2->transform = Transform(glm::vec3(10.0, 1.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(10.0, -14.0, 3.0), glm::vec3(0.0, -1.0, 0.0));
+	terrain2->model.material.uniforms.color = {0.3f, 0.6f, 0.5f, 1.0};
 
 	scene.entities.push_back(terrain);
 	scene.entities.push_back(player);
+	scene.entities.push_back(terrain2);
 	scene.colliders.push_back(collider);
+	scene.colliders.push_back(collider2);
 	
 
 	while (renderer.isRunning())

@@ -7,7 +7,7 @@
 
 void BoxCollider::onFrame()
 {
-    transformBox(box, parent->model.material.uniforms.projectionMatrix, parent->model.material.uniforms.viewMatrix, parent->model.material.uniforms.modelMatrix);
+    transformBox(box, parent->model.material.uniforms.modelMatrix);
 }
 
 void printAABB(AABB aabb)
@@ -90,8 +90,8 @@ std::vector<Collision> getCollisionsFromRay(const Raycast &ray, const std::vecto
     return collisions;
 }
 
-void transformBox(AABB& box, const glm::mat4x4& projMatrix, const glm::mat4x4& viewMatrix, const glm::mat4x4& modelMatrix)
+void transformBox(AABB& box, const glm::mat4x4& modelMatrix)
 {
-    box.min = modelMatrix * glm::vec4(box.baseMin, 0.0f);
-    box.max = modelMatrix * glm::vec4(box.baseMax, 0.0f);
+    box.min = modelMatrix * glm::vec4(box.baseMin, 1.0f);
+    box.max = modelMatrix * glm::vec4(box.baseMax, 1.0f);
 }

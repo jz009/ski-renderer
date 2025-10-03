@@ -64,4 +64,4 @@ bool boxOverlap(AABB a, AABB b);
 Intersection rayBoxIntersect(AABB box, Raycast ray, float t0, float t1);
 Raycast getRayFromMouse(float mouseX, float mouseY, const glm::mat4& view, const glm::mat4& proj);
 std::vector<Collision> getCollisionsFromRay(const Raycast& ray, const std::vector<BoxCollider>& colliders, Layer layer);
-void transformBox(AABB &box, const glm::mat4x4& projMatrix, const glm::mat4x4& viewMatrix, const glm::mat4x4& modelMatrix);
+void transformBox(AABB &box, const glm::mat4x4& modelMatrix);
