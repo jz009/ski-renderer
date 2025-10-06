@@ -15,7 +15,7 @@ struct Uniforms
     float _pad[3];
 
     Uniforms::Uniforms() = default;
-    Uniforms(Camera &camera)
+    Uniforms(const Camera &camera)
     {
         float fov = 2 * glm::atan(1 / camera.focalLength);
         time = static_cast<float>(glfwGetTime());
@@ -54,4 +54,4 @@ struct Model
 
 ObjResult loadObj(const std::filesystem::path& geometry);
 std::vector<VertexAttributes> load2D(const std::filesystem::path& geometry);
-void updateModel(Model& model, const Transform& transform, std::shared_ptr<Camera> camera);
+void updateModel(Model& model, const Transform& transform, const Camera& camera);

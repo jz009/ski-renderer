@@ -7,26 +7,30 @@ struct Raycast
 {
     glm::vec3 origin;
     glm::vec3 direction;
-    glm::vec3 inv_direction;
+    glm::vec3 invDirection;
+    float maxLength;
     int sign[3];
-    Raycast(const glm::vec3 &_origin, const glm::vec3 &_direction)
+    Raycast(const glm::vec3& _origin, const glm::vec3& _direction, float _maxLength)
     {
         origin = _origin;
         direction = _direction;
-        inv_direction = glm::vec3(1 / direction.x, 1 / direction.y, 1 / direction.z);
-        sign[0] = (inv_direction.x < 0);
-        sign[1] = (inv_direction.y < 0);
-        sign[2] = (inv_direction.z < 0);
+        invDirection = glm::vec3(1 / direction.x, 1 / direction.y, 1 / direction.z);
+        maxLength = _maxLength;
+        sign[0] = (invDirection.x < 0);
+        sign[1] = (invDirection.y < 0);
+        sign[2] = (invDirection.z < 0);
     }
 };
 
-enum Layer
+enum struct Layer
 {
     NONE,
+    PLAYER,
     WALKABLE,
+    IMPASSABLE,
 };
 
-struct Intersection
+struct RayIntersection
 {
     bool intersected;
     glm::vec3 near;
@@ -38,30 +42,61 @@ struct BoxCollider
     AABB box;
     std::bitset<32> layerMask;
     std::shared_ptr<Entity> parent;
-    BoxCollider(AABB _box, std::vector<Layer> _layers, std::shared_ptr<Entity> _parent)
-    {
-        box = _box;
-        for (int i : _layers)
-        {
-            layerMask[i] = 1;
-        }
-        parent = _parent;
-    }
+
+    void createCollider(AABB _box, std::vector<Layer> _layers, std::shared_ptr<Entity> _parent);
+    RayIntersection rayBoxIntersect(Raycast ray);
+    void transformBox(const glm::mat4x4& modelMatrix);
 
     void onFrame();
 };
 
-struct Collision
-{
-    std::shared_ptr<Entity> entity;
-    AABB box;
-    Intersection intersection;
+struct BoxCollision {
+    std::shared_ptr<BoxCollider> collider;
 };
 
-void printAABB(AABB aabb);
-bool pointInBox(glm::vec3 point, AABB box);
-bool boxOverlap(AABB a, AABB b);
-Intersection rayBoxIntersect(AABB box, Raycast ray, float t0, float t1);
+struct RayCollision
+{
+    std::shared_ptr<BoxCollider> collider;
+    RayIntersection intersection;
+};
+
+struct NavMeshBox {
+    AABB2D box;
+    std::bitset<32> layerMask;
+
+    NavMeshBox(AABB _box,  std::bitset<32> _layerMask) : box(AABB2D::fromAABB(_box)), layerMask(_layerMask) {}
+};
+
+struct NavMesh {
+    std::vector<NavMeshBox> polygons;
+
+    NavMesh() {}
+    NavMesh(std::vector<std::shared_ptr<BoxCollider>> colliders) {
+        for (std::shared_ptr<BoxCollider> box : colliders) {
+            polygons.push_back(NavMeshBox(box->box, box->layerMask));
+        }
+    }
+
+    std::bitset<32> getLayers(glm::vec3 point);
+    bool lineOfSight(glm::vec3 a, glm::vec3 b, std::bitset<32> layerMask);
+    void print() {
+        for (NavMeshBox box : polygons) {
+            box.box.print();
+            printf("%s", box.layerMask.to_string().c_str());
+        }
+    }
+};
+
+struct ColliderTree {
+    std::vector<std::shared_ptr<BoxCollider>> colliders;
+    NavMesh navMesh;
+
+    void add(std::shared_ptr<BoxCollider> collider);
+    void bakeNavMesh();
+    std::vector<BoxCollision> getBoxCollisions(AABB box);
+    std::vector<RayCollision> getRayCollisions(const Raycast& ray) const;
+};
+
+
+
 Raycast getRayFromMouse(float mouseX, float mouseY, const glm::mat4& view, const glm::mat4& proj);
-std::vector<Collision> getCollisionsFromRay(const Raycast& ray, const std::vector<BoxCollider>& colliders, Layer layer);
-void transformBox(AABB &box, const glm::mat4x4& modelMatrix);

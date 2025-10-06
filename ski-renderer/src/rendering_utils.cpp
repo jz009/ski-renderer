@@ -104,7 +104,7 @@ std::vector<VertexAttributes> load2D(const std::filesystem::path &geometry)
     return vertexData;
 }
 
-void updateModel(Model& model, const Transform& transform, std::shared_ptr<Camera> camera) {
+void updateModel(Model& model, const Transform& transform, const Camera& camera) {
     model.material.uniforms.modelMatrix = glm::translate(glm::mat4x4(1.0), transform.offset) * glm::translate(glm::mat4x4(1.0), transform.position) * glm::scale(glm::mat4x4(1.0), transform.scale);
-    model.material.uniforms.viewMatrix = glm::lookAt(camera->position, camera->target, camera->up);
+    model.material.uniforms.viewMatrix = glm::lookAt(camera.position, camera.target, camera.up);
 }

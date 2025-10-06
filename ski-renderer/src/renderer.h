@@ -5,6 +5,8 @@
 
 struct Renderer
 {
+    DISALLOW_IMPLICIT_COPIES(Renderer)
+    
     struct PipelineDefaults
     {
         wgpu::PipelineLayout defaultLayout;
@@ -25,8 +27,6 @@ struct Renderer
 GLFWwindow *window;
 
 Renderer::Renderer();
-Renderer(const Renderer &) = delete;
-Renderer operator=(const Renderer &) const = delete;
 
 void terminate();
 bool isRunning();

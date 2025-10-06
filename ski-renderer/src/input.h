@@ -25,7 +25,6 @@ struct MouseClickInput
 struct Input
 {
     Input::Input(GLFWwindow* window_);
-    void init(GLFWwindow* window_);
     void onKeyPress(int key, int scancode, int action, int mods);
     void onMouseClick(int button, int action, int mods);
     void onMouseMove(glm::vec2 mousePos);
@@ -33,8 +32,8 @@ struct Input
     KeyboardInput keyboardInput = { false };
     MouseClickInput mouseClickInput = { false };
     glm::vec2 mousePosition;
-
     GLFWwindow* window;
+
+    //Input() {}
 };
 
-Input* getInput();

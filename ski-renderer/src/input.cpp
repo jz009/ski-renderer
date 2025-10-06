@@ -33,10 +33,6 @@ void Input::clear()
 Input::Input(GLFWwindow* window_)
 {
     window = window_;
-    if (!window)
-    {
-        return;
-    }
     glfwSetWindowUserPointer(window, this);
     glfwSetKeyCallback(window, keyCallback);
     glfwSetMouseButtonCallback(window, mouseButtonCallback);
@@ -60,23 +56,4 @@ void Input::onMouseClick(int button, int action, int mods)
 void Input::onMouseMove(glm::vec2 mousePos)
 {
     mousePosition = mousePos;
-}
-
-void Input::init(GLFWwindow* window_)
-{
-    window = window_;
-    if (!window)
-    {
-        return;
-    }
-    glfwSetWindowUserPointer(window, this);
-    glfwSetKeyCallback(window, keyCallback);
-    glfwSetMouseButtonCallback(window, mouseButtonCallback);
-    glfwSetCursorPosCallback(window, mousePositionCallback);
-}
-
-Input* getInput()
-{
-    static Input INPUT(nullptr);
-    return &INPUT;
 }

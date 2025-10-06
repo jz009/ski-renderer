@@ -30,6 +30,13 @@
 #include <limits>
 #include <queue>
 #include <bitset>
+#include <algorithm>
+#include <unordered_set>
+
+#define DISALLOW_IMPLICIT_COPIES(T) \
+    T(T&&) = default; \
+    T(const T&) = delete; \
+    T operator=(const T&) const = delete; 
 
 struct Entity;
 struct Scene;
@@ -42,6 +49,7 @@ struct Raycast;
 struct Constants
 {
     static constexpr float D2R = (float)M_PI / 180.f;
+    static constexpr float MAX_RADIANS = (float)M_PI * 2.0f;
     static constexpr uint32_t WIDTH = 1500;
     static constexpr uint32_t HEIGHT = 1000;
 
@@ -51,6 +59,11 @@ struct Constants
 
 #ifndef HELPERS
 #define HELPERS
+inline void newline()
+{
+    printf("\n");
+}
+
 inline void printVec3(glm::vec3 vec)
 {
     printf("%f, %f, %f\n", vec.x, vec.y, vec.z);
@@ -59,5 +72,18 @@ inline void printVec3(glm::vec3 vec)
 inline void printVec2(glm::vec2 vec)
 {
     printf("%f, %f\n", vec.x, vec.y);
+}
+
+inline void printBool(bool b)
+{
+    if (b) {
+        printf("true\n");
+    } else {
+        printf("false\n");
+    }
+}
+
+inline bool areClose(float a, float b) {
+    return abs(a - b) < .01f;
 }
 #endif
