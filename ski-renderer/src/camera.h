@@ -26,7 +26,7 @@ struct Camera
 
     Camera::Camera()
     {
-        position = glm::vec3(0.0f, 10.0f, 0.0f);
+        position = glm::vec3(0.0f, 20.0f, 0.0f);
         target = glm::vec3(0.0f, 0.0f, 0.0f);
         up = glm::vec3(0.0f, 1.0f, 0.0f);
         ratio = (float)Constants::WIDTH / (float)Constants::HEIGHT;

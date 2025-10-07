@@ -57,12 +57,28 @@ glm::vec3 Movement::move(glm::vec3 position)
     return glm::mix(position, targetPosition, Time::deltaTime / finalSpeed);
 }
 
-std::deque<glm::vec3> constructPath(std::unordered_map<glm::vec3, glm::vec3> cameFrom, glm::vec3 current) {
+std::deque<glm::vec3> constructPath(std::unordered_map<glm::vec3, glm::vec3> cameFrom, glm::vec3 current, Scene& scene) {
     std::deque<glm::vec3> path;
+    glm::vec3 last = current;
     path.push_back(current);
-    while (cameFrom.count(current)) {
+    if (cameFrom.count(current)) {
         current = cameFrom[current];
         path.push_front(current);
+    }
+    else {
+        return path;
+    }
+    while (cameFrom.count(current)) {
+        glm::vec3 parent = current;
+        current = cameFrom[current];
+        if (scene.colliders.navMesh.lineOfSight(current, last, 1 << (int)Layer::IMPASSABLE)) {
+            path.pop_front();
+            path.push_front(current);
+        }
+        else {
+            last = parent;
+            path.push_front(current);
+        }
     }
     return path;
 }
@@ -91,9 +107,14 @@ std::vector<glm::vec3> getNeighbors(glm::vec3 center, std::shared_ptr<Entity> en
 }
 
 std::deque<glm::vec3> aStar(std::shared_ptr<Entity> entity, const glm::vec3 target, Scene& scene) {
+    std::bitset<32> impassable = 1 << (int)Layer::IMPASSABLE;
     int count = 0;
     if (!areClose(entity->transform.position.y, target.y)) {
         return std::deque<glm::vec3>();
+    }
+    bool lineOfSight = scene.colliders.navMesh.lineOfSight(entity->transform.position, target, impassable);
+    if (lineOfSight) {
+        return { target };
     }
 
     std::priority_queue<Candidate, std::vector<Candidate>, std::greater<Candidate>> candidates;
@@ -117,15 +138,13 @@ std::deque<glm::vec3> aStar(std::shared_ptr<Entity> entity, const glm::vec3 targ
         candidates.pop();
 
         if (glm::distance(current.position, target) < 0.6f) {
-            return constructPath(cameFrom, current.position);
+            return constructPath(cameFrom, current.position, scene);
         }
 
-        std::bitset<32> impassable;
-        impassable.flip((int)Layer::IMPASSABLE);
-        bool lineOfSight = scene.colliders.navMesh.lineOfSight(current.position, target, impassable);
+        lineOfSight = scene.colliders.navMesh.lineOfSight(current.position, target, impassable);
         if (lineOfSight) {
             cameFrom[target] = current.position;
-            return constructPath(cameFrom, target);
+            return constructPath(cameFrom, target, scene);
         }
 
         for (Candidate candidate : getNeighbors(current.position, entity, scene)) {

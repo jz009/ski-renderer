@@ -27,6 +27,8 @@ int main()
 	terrain2->name = "low ground";
 	auto terrain3 = std::make_shared<Terrain>();
 	terrain3->name = "wall";
+	auto terrain4 = std::make_shared<Terrain>();
+	terrain4->name = "wall";
 	Material basic = renderer.createMaterial(Constants::sDEFAULT, Uniforms(*scene.camera));
 	ObjResult cubeObj = loadObj(Constants::mCUBE);
 	Model cube = renderer.createModel(cubeObj.vertexData, basic);
@@ -39,6 +41,8 @@ int main()
 	collider2->createCollider(cubeObj.box, std::vector{ Layer::WALKABLE }, terrain2);
 	auto collider3 = std::make_shared<BoxCollider>();
 	collider3->createCollider(cubeObj.box, std::vector{ Layer::IMPASSABLE }, terrain3);
+	auto collider4 = std::make_shared<BoxCollider>();
+	collider4->createCollider(cubeObj.box, std::vector{ Layer::IMPASSABLE }, terrain4);
 
 
 	player->model = cube;
@@ -46,7 +50,7 @@ int main()
 	player->model.material.uniforms.color = { 0.7f, 0.3f, 0.3f, 1.0 };
 
 	terrain->model = cube;
-	terrain->transform = Transform(glm::vec3(10.0, 1.0, 10.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0));
+	terrain->transform = Transform(glm::vec3(20.0, 1.0, 20.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0));
 	terrain->model.material.uniforms.color = { 0.3f, 1.0f, 0.0, 1.0 };
 
 	terrain2->model = cube;
@@ -57,13 +61,20 @@ int main()
 	terrain3->transform = Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0));
 	terrain3->model.material.uniforms.color = { 0.8f, 0.8f, 0.8f, 1.0 };
 
+	terrain4->model = cube;
+	terrain4->transform = Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-25.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0));
+	terrain4->model.material.uniforms.color = { 0.8f, 0.8f, 0.8f, 1.0 };
+
+
 	scene.entities.push_back(terrain);
 	scene.entities.push_back(player);
 	scene.entities.push_back(terrain2);
 	scene.entities.push_back(terrain3);
+	scene.entities.push_back(terrain4);
 	scene.colliders.add(collider);
 	scene.colliders.add(collider2);
 	scene.colliders.add(collider3);
+	scene.colliders.add(collider4);
 	scene.colliders.add(playerCollider);
 
 	for (const auto& entity : scene.entities)
