@@ -1,6 +1,8 @@
 #pragma once
 #include "includes_fwd.h"
 
+#include "input.h"
+
 glm::vec3 posOnCircle(glm::vec3 target, float& theta, float delta, float radius, float yPos);
 
 enum struct CameraState {
@@ -33,7 +35,7 @@ struct Camera
         far = 100.0f;
     }
 
-    virtual void onFrame(Scene&) {}
+    virtual void onFrame(Scene&, const Input&) {};
     void moveCamera(glm::vec3 _position);
 
 };
@@ -49,5 +51,5 @@ struct CircleBoundCamera : Camera {
         speed = 0.01f;
         position = posOnCircle(target, thetaPosition, 0.0f, _radius, position.y);
     }
-    void onFrame(Scene& scene) override;
+    void onFrame(Scene& scene, const Input& input) override;
 };

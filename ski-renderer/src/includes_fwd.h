@@ -32,6 +32,7 @@
 #include <bitset>
 #include <algorithm>
 #include <unordered_set>
+#include <chrono>
 
 #define DISALLOW_IMPLICIT_COPIES(T) \
     T(T&&) = default; \
@@ -54,7 +55,14 @@ struct Constants
     static constexpr uint32_t HEIGHT = 1000;
 
     static const std::string Constants::mCUBE;
-	static const std::string Constants::sDEFAULT;
+    static const std::string Constants::sDEFAULT;
+};
+
+struct Time
+{
+    static float deltaTime;
+    static std::chrono::steady_clock::time_point lastFrame;
+    static std::chrono::steady_clock::time_point thisFrame;
 };
 
 #ifndef HELPERS
@@ -78,7 +86,8 @@ inline void printBool(bool b)
 {
     if (b) {
         printf("true\n");
-    } else {
+    }
+    else {
         printf("false\n");
     }
 }
@@ -86,4 +95,5 @@ inline void printBool(bool b)
 inline bool areClose(float a, float b) {
     return abs(a - b) < .01f;
 }
+
 #endif

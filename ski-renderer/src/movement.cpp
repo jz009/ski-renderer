@@ -52,7 +52,9 @@ glm::vec3 Movement::move(glm::vec3 position)
         return position;
     }
     glm::vec3 targetPosition = targetPath.front();
-    return glm::mix(position, targetPosition, 0.5f);
+    float distance = glm::distance(position, targetPosition);
+    float finalSpeed = (distance / speed);
+    return glm::mix(position, targetPosition, Time::deltaTime / finalSpeed);
 }
 
 std::deque<glm::vec3> constructPath(std::unordered_map<glm::vec3, glm::vec3> cameFrom, glm::vec3 current) {

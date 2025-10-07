@@ -11,7 +11,6 @@ struct Scene {
     std::vector<std::shared_ptr<Entity>> entities;
     ColliderTree colliders;
     std::unique_ptr<Camera> camera;
-    Input input;
 
-    Scene::Scene(std::unique_ptr<Camera> _camera, GLFWwindow* window) : camera(std::move(_camera)), input(Input(window)) {}
+    Scene::Scene(std::unique_ptr<Camera> _camera) : camera(std::move(_camera)) {}
 };

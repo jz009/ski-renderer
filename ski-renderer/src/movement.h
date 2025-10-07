@@ -3,7 +3,7 @@
 
 struct Movement
 {
-    glm::vec3 speed = {0.05, 0.05, 0.05};
+    float speed = 15.0f;
     std::deque<glm::vec3> targetPath = std::deque<glm::vec3>();
 
     glm::vec3 move(glm::vec3 position);

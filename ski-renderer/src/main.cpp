@@ -14,9 +14,10 @@ int main()
 	Renderer renderer;
 	GLFWwindow* window = renderer.window;
 	int count = 0;
+	Input input(window);
 
 	auto camera = std::make_unique<CircleBoundCamera>(20.0f);
-	Scene scene(std::move(camera), window);
+	Scene scene(std::move(camera));
 
 	auto player = std::make_shared<Player>();
 	player->name = "player";
@@ -67,7 +68,7 @@ int main()
 
 	for (const auto& entity : scene.entities)
 	{
-		entity->onFrame(scene);
+		entity->onFrame(scene, input);
 	}
 	for (auto& c : scene.colliders.colliders) {
 		c->onFrame();
@@ -75,13 +76,18 @@ int main()
 
 	scene.colliders.bakeNavMesh();
 
+	Time::lastFrame = std::chrono::high_resolution_clock::now();
+
 	while (renderer.isRunning())
 	{
+		Time::thisFrame = std::chrono::high_resolution_clock::now();
+		Time::deltaTime = (float)(std::chrono::duration_cast<std::chrono::milliseconds>(Time::thisFrame - Time::lastFrame).count()/1000.0f);
+		
 		count = count + 1;
 		renderer.beginFrame();
 		for (const auto& entity : scene.entities)
 		{
-			entity->onFrame(scene);
+			entity->onFrame(scene, input);
 			auto model = entity->getModel();
 			if (model) {
 				renderer.draw(*model);
@@ -90,9 +96,10 @@ int main()
 		for (auto& c : scene.colliders.colliders) {
 			c->onFrame();
 		}
-		scene.camera->onFrame(scene);
+		scene.camera->onFrame(scene, input);
 		renderer.endFrame();
-		scene.input.clear();
+		input.clear();
+		Time::lastFrame = Time::thisFrame;
 	}
 
 	renderer.terminate();

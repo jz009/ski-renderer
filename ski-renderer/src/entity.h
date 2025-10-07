@@ -15,7 +15,7 @@ struct Entity : std::enable_shared_from_this<Entity>
     Model model;
     Transform transform;
     std::shared_ptr<BoxCollider> collider;
-    virtual void onFrame(Scene&) {}
+    virtual void onFrame(Scene&, const Input&) {}
     virtual void onLoad() {}
     virtual std::optional<Model> getModel()
     {
@@ -25,9 +25,10 @@ struct Entity : std::enable_shared_from_this<Entity>
 
 struct Terrain : Entity
 {
-    void onFrame(Scene& scene) override
+    void onFrame(Scene& scene, const Input& input) override
     {
         (void)scene;
+        (void)input;
         updateModel(model, transform, *scene.camera);
     }
     std::optional<Model> getModel() override {
@@ -38,9 +39,8 @@ struct Terrain : Entity
 struct Player : Entity
 {
     Movement movement;
-    void onFrame(Scene& scene) override
+    void onFrame(Scene& scene, const Input& input) override
     {
-        const Input& input = scene.input;
         bool leftButtonPressed = input.mouseClickInput.fresh && input.mouseClickInput.button == GLFW_MOUSE_BUTTON_LEFT && input.mouseClickInput.action == GLFW_PRESS;
         if (leftButtonPressed)
         {

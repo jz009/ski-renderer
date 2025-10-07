@@ -9,8 +9,7 @@ void Camera::moveCamera(glm::vec3 _position) {
     position = _position;
 }
 
-void CircleBoundCamera::onFrame(Scene& scene) {
-    const Input& input = scene.input;
+void CircleBoundCamera::onFrame(Scene&, const Input& input) {
     glm::vec2 mousePos = glm::vec2(input.mousePosition);
     float s = speed;
 
