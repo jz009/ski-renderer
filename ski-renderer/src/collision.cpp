@@ -5,31 +5,21 @@
 #include "entity.h"
 #include "AABB.h"
 
-void BoxCollider::onFrame()
-{
-    transformBox(parent->model.material.uniforms.modelMatrix);
-}
-
-void BoxCollider::createCollider(AABB _box, std::vector<Layer> _layers, std::shared_ptr<Entity> _parent) {
+void BoxCollider::createCollider(AABB _box, const std::vector<Layer>& _layers) {
     box = _box;
     for (Layer i : _layers)
     {
         layerMask[(int)i] = 1;
     }
-    parent = _parent;
 }
 
 void ColliderTree::add(std::shared_ptr<BoxCollider> collider) {
-    collider->parent->collider = collider;
     colliders.push_back(collider);
 };
 
 std::vector<BoxCollision> ColliderTree::getBoxCollisions(AABB box) {
     std::vector<BoxCollision> collisions;
     for (std::shared_ptr<BoxCollider> collider : colliders) {
-        // box.print();
-        // printf("%s: ", collider->parent->name.c_str());
-        // collider->box.print();
         if (box.boxOverlap(collider->box, glm::vec3{ 0.0f, 0.1f, 0.0f })) {
             collisions.push_back({ collider });
         }
@@ -70,7 +60,7 @@ std::vector<RayCollision> ColliderTree::getRayCollisions(const Raycast& ray) con
         RayIntersection intersection = collider->rayBoxIntersect(ray);
         if (intersection.intersected)
         {
-            collisions.push_back(RayCollision{ collider, intersection });
+            collisions.push_back(RayCollision{ *collider, intersection });
         }
     }
     return collisions;
@@ -102,18 +92,18 @@ void ColliderTree::bakeNavMesh() {
 
 std::bitset<32> NavMesh::getLayers(glm::vec3 point) {
     std::bitset<32> layers;
-    for (NavMeshBox box : polygons) {
-        if (box.box.pointInBox(point)) {
-            layers = box.layerMask | layers;
+    for (const NavMeshBox& polygon : polygons) {
+        if (polygon.box.pointInBox(point)) {
+            layers = polygon.layerMask | layers;
         }
     }
     return layers;
 }
 
 bool NavMesh::lineOfSight(glm::vec3 a, glm::vec3 b, std::bitset<32> layerMask) {
-    for (NavMeshBox box : polygons) {
-        if ((box.layerMask & layerMask) == box.layerMask) {
-            if (box.box.lineIntersect(glm::vec2(a.x, a.z), glm::vec2(b.x, b.z))) {
+    for (const NavMeshBox& polygon : polygons) {
+        if ((polygon.layerMask & layerMask) == polygon.layerMask) {
+            if (polygon.box.lineIntersect(glm::vec2(a.x, a.z), glm::vec2(b.x, b.z))) {
                 return false;
             }
         }

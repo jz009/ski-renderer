@@ -65,15 +65,13 @@ Renderer::Renderer()
 
 void Renderer::terminate()
 {
-    wgpuBindGroupRelease(bindGroup);
     wgpuPipelineLayoutRelease(pipelineDefaults.defaultLayout);
     wgpuBindGroupLayoutRelease(pipelineDefaults.defaultBindGroupLayout);
-    wgpuBufferRelease(pointBuffer);
-    wgpuBufferRelease(indexBuffer);
+    // wgpuBufferRelease(pointBuffer);
+    // wgpuBufferRelease(indexBuffer);
     wgpuTextureViewRelease(pipelineDefaults.depthTextureView);
     wgpuTextureDestroy(pipelineDefaults.depthTexture);
     wgpuTextureRelease(pipelineDefaults.depthTexture);
-    wgpuRenderPipelineRelease(pipeline);
     wgpuSurfaceUnconfigure(surface);
     wgpuQueueRelease(queue);
     wgpuSurfaceRelease(surface);
@@ -241,7 +239,7 @@ Material Renderer::createMaterial(const std::filesystem::path &shaderPath, const
     return {shader, uniforms};
 }
 
-Model Renderer::createModel(std::vector<VertexAttributes> vertexData, const Material &material)
+Model Renderer::createModel(const std::vector<VertexAttributes>& vertexData, const Material &material)
 {
     wgpu::BufferDescriptor bufferDesc;
     bufferDesc.size = vertexData.size() * sizeof(VertexAttributes);
@@ -305,6 +303,10 @@ void Renderer::draw(const Model &model)
     renderPass.setBindGroup(0, bindGroup, 0, nullptr);
     // renderPass.drawIndexed(indexCount, 1, 0, 0, 0);
     renderPass.draw(model.vertexCount, 1, 0, 0);
+    uniformBuffer.release();
+    bindGroup.release();
+    pipeline.release();
+
 }
 
 void Renderer::beginFrame()
@@ -327,7 +329,6 @@ void Renderer::endFrame()
     queue.submit(1, &command);
     command.release();
     targetView.release();
-    uniformBuffer.release();
 
 #ifndef __EMSCRIPTEN__
     wgpuSurfacePresent(surface);
@@ -340,7 +341,7 @@ void Renderer::endFrame()
 #endif
 }
 
-void Renderer::createPipeline(wgpu::ShaderModule shaderModule)
+void Renderer::createPipeline(const wgpu::ShaderModule& shaderModule)
 {
     wgpu::RenderPipelineDescriptor pipelineDesc{};
     pipelineDesc.nextInChain = nullptr;

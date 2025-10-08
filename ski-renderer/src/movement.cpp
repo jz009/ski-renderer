@@ -87,7 +87,7 @@ std::vector<glm::vec3> getNeighbors(glm::vec3 center, std::shared_ptr<Entity> en
     std::vector<glm::vec3> neighbors;
     auto colliders = scene.colliders;
 
-    float step = 1.0f;
+    float step = 2.0f;
     for (int i = -1; i < 2; ++i)
     {
         for (int j = -1; j < 2; ++j)

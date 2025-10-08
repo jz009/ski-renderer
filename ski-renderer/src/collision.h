@@ -41,13 +41,10 @@ struct BoxCollider
 {
     AABB box;
     std::bitset<32> layerMask;
-    std::shared_ptr<Entity> parent;
 
-    void createCollider(AABB _box, std::vector<Layer> _layers, std::shared_ptr<Entity> _parent);
+    void createCollider(AABB _box, const std::vector<Layer>& _layers);
     RayIntersection rayBoxIntersect(Raycast ray);
     void transformBox(const glm::mat4x4& modelMatrix);
-
-    void onFrame();
 };
 
 struct BoxCollision {
@@ -56,7 +53,7 @@ struct BoxCollision {
 
 struct RayCollision
 {
-    std::shared_ptr<BoxCollider> collider;
+    BoxCollider collider;
     RayIntersection intersection;
 };
 

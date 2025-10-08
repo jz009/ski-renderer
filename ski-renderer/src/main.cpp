@@ -34,16 +34,15 @@ int main()
 	Model cube = renderer.createModel(cubeObj.vertexData, basic);
 
 	auto playerCollider = std::make_shared<BoxCollider>();
-	playerCollider->createCollider(cubeObj.box, std::vector{ Layer::PLAYER }, player);
+	playerCollider->createCollider(cubeObj.box, std::vector{ Layer::PLAYER });
 	auto collider = std::make_shared<BoxCollider>();
-	collider->createCollider(cubeObj.box, std::vector{ Layer::WALKABLE }, terrain);
+	collider->createCollider(cubeObj.box, std::vector{ Layer::WALKABLE });
 	auto collider2 = std::make_shared<BoxCollider>();
-	collider2->createCollider(cubeObj.box, std::vector{ Layer::WALKABLE }, terrain2);
+	collider2->createCollider(cubeObj.box, std::vector{ Layer::WALKABLE });
 	auto collider3 = std::make_shared<BoxCollider>();
-	collider3->createCollider(cubeObj.box, std::vector{ Layer::IMPASSABLE }, terrain3);
+	collider3->createCollider(cubeObj.box, std::vector{ Layer::IMPASSABLE });
 	auto collider4 = std::make_shared<BoxCollider>();
-	collider4->createCollider(cubeObj.box, std::vector{ Layer::IMPASSABLE }, terrain4);
-
+	collider4->createCollider(cubeObj.box, std::vector{ Layer::IMPASSABLE });
 
 	player->model = cube;
 	player->transform = Transform(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
@@ -62,9 +61,14 @@ int main()
 	terrain3->model.material.uniforms.color = { 0.8f, 0.8f, 0.8f, 1.0 };
 
 	terrain4->model = cube;
-	terrain4->transform = Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-25.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0));
+	terrain4->transform = Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-20.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0));
 	terrain4->model.material.uniforms.color = { 0.8f, 0.8f, 0.8f, 1.0 };
 
+	player->collider = playerCollider;
+	terrain->collider = collider;
+	terrain2->collider = collider2;
+	terrain3->collider = collider3;
+	terrain4->collider = collider4;
 
 	scene.entities.push_back(terrain);
 	scene.entities.push_back(player);
@@ -81,9 +85,6 @@ int main()
 	{
 		entity->onFrame(scene, input);
 	}
-	for (auto& c : scene.colliders.colliders) {
-		c->onFrame();
-	}
 
 	scene.colliders.bakeNavMesh();
 
@@ -99,13 +100,10 @@ int main()
 		for (const auto& entity : scene.entities)
 		{
 			entity->onFrame(scene, input);
-			auto model = entity->getModel();
-			if (model) {
+			
+			if (Model* model = entity->getModel()) {
 				renderer.draw(*model);
 			}
-		}
-		for (auto& c : scene.colliders.colliders) {
-			c->onFrame();
 		}
 		scene.camera->onFrame(scene, input);
 		renderer.endFrame();

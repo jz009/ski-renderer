@@ -35,7 +35,7 @@ void draw(const Model& model);
 void endFrame();
 void beginFrame();
 
-Model createModel(std::vector<VertexAttributes> vertexData, const Material& material);
+Model createModel(const std::vector<VertexAttributes>& vertexData, const Material& material);
 Material createMaterial(const std::filesystem::path &shaderPath, const Uniforms& uniforms);
 
 wgpu::TextureView getNextSurfaceTextureView();
@@ -44,10 +44,8 @@ void createRenderPass();
 void initializePipelineDefaults();
 void writeUniformBuffer(const Material& material);
 void initializeBindGroups();
-void createPipeline(wgpu::ShaderModule shaderModule);
+void createPipeline(const wgpu::ShaderModule& shaderModule);
 
-ObjResult loadObj(const std::filesystem::path& geometry);
-std::vector<VertexAttributes> load2D(const std::filesystem::path& geometry);
 
 wgpu::Adapter requestAdapterSync(WGPUInstance instance, WGPURequestAdapterOptions const *options);
 wgpu::Device requestDeviceSync(WGPUAdapter adapter, WGPUDeviceDescriptor const *descriptor);

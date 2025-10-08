@@ -48,7 +48,7 @@ struct AABB2D {
         printf("min: %f, %f, max: %f, %f\n", min.x, min.y, max.x, max.y);
     }
 
-    bool AABB2D::pointInBox(glm::vec3 point)
+    bool AABB2D::pointInBox(glm::vec3 point) const
     {
         return (
             point.x >= min.x &&
@@ -57,14 +57,14 @@ struct AABB2D {
             point.z <= max.y);
     }
 
-    bool AABB2D::boxOverlap(AABB b)
+    bool AABB2D::boxOverlap(AABB b) const
     {
         return
             (min.x <= b.max.x && max.x >= b.min.x) &&
             (min.y <= b.max.y && max.y >= b.min.y);
     }
 
-    bool AABB2D::lineIntersect(glm::vec2 a, glm::vec2 b) {
+    bool AABB2D::lineIntersect(glm::vec2 a, glm::vec2 b) const {
         float lineMinX = std::min(a.x, b.x);
         float lineMinY = std::min(a.y, b.y);
         float lineMaxX = std::max(a.x, b.x);
@@ -85,7 +85,7 @@ struct AABB2D {
         for (int i = 0; i < 4; ++i) {
             if (p[i] == 0.0f) {
                 if (q[i] < 0.0f)
-                    return false; 
+                    return false;
             }
             else {
                 float r = q[i] / p[i];
@@ -96,7 +96,7 @@ struct AABB2D {
                     t1 = std::min(t1, r);
                 }
                 if (t0 > t1)
-                    return false; 
+                    return false;
             }
         }
         return true;

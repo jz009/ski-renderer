@@ -17,9 +17,9 @@ struct Entity : std::enable_shared_from_this<Entity>
     std::shared_ptr<BoxCollider> collider;
     virtual void onFrame(Scene&, const Input&) {}
     virtual void onLoad() {}
-    virtual std::optional<Model> getModel()
+    virtual Model* getModel()
     {
-        return std::nullopt;
+        return nullptr;
     }
 };
 
@@ -30,9 +30,10 @@ struct Terrain : Entity
         (void)scene;
         (void)input;
         updateModel(model, transform, *scene.camera);
+        collider->transformBox(model.material.uniforms.modelMatrix);
     }
-    std::optional<Model> getModel() override {
-        return model;
+    Model* getModel() override {
+        return &model;
     }
 };
 
@@ -49,7 +50,7 @@ struct Player : Entity
             auto colliders = scene.colliders.getRayCollisions(ray);
             if (!colliders.empty()) {
                 RayCollision collision = colliders.front();
-                if (collision.collider->layerMask[(int)Layer::WALKABLE] && areClose(collision.intersection.near.y, collision.collider->box.max.y)) {
+                if (collision.collider.layerMask[(int)Layer::WALKABLE] && areClose(collision.intersection.near.y, collision.collider.box.max.y)) {
                     auto path = aStar(shared_from_this(), collision.intersection.near, scene);
                     movement.targetPath = path;
                 }
@@ -58,9 +59,10 @@ struct Player : Entity
 
         transform.position = movement.move(transform.position);
         updateModel(model, transform, *scene.camera);
+        collider->transformBox(model.material.uniforms.modelMatrix);
     }
 
-    std::optional<Model> getModel() override {
-        return model;
+    Model* getModel() override {
+        return &model;
     }
 };
