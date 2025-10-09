@@ -60,8 +60,8 @@ struct RayCollision
 struct NavMeshBox {
     AABB2D box;
     std::bitset<32> layerMask;
-
-    NavMeshBox(AABB _box,  std::bitset<32> _layerMask) : box(AABB2D::fromAABB(_box)), layerMask(_layerMask) {}
+    NavMeshBox() = default;
+    NavMeshBox(AABB _box, std::bitset<32> _layerMask) : box(AABB2D::fromAABB(_box)), layerMask(_layerMask) {}
 };
 
 struct NavMesh {
@@ -69,6 +69,7 @@ struct NavMesh {
 
     NavMesh() {}
     NavMesh(std::vector<std::shared_ptr<BoxCollider>> colliders) {
+        polygons.reserve(colliders.size());
         for (std::shared_ptr<BoxCollider> box : colliders) {
             polygons.push_back(NavMeshBox(box->box, box->layerMask));
         }
@@ -77,9 +78,9 @@ struct NavMesh {
     std::bitset<32> getLayers(glm::vec3 point);
     bool lineOfSight(glm::vec3 a, glm::vec3 b, std::bitset<32> layerMask);
     void print() {
-        for (NavMeshBox box : polygons) {
+        for (const NavMeshBox& box : polygons) {
             box.box.print();
-            printf("%s", box.layerMask.to_string().c_str());
+            printf("%s\n", box.layerMask.to_string().c_str());
         }
     }
 };

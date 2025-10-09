@@ -83,36 +83,40 @@ std::deque<glm::vec3> constructPath(std::unordered_map<glm::vec3, glm::vec3> cam
     return path;
 }
 
-std::vector<glm::vec3> getNeighbors(glm::vec3 center, std::shared_ptr<Entity> entity, Scene& scene) {
+std::vector<glm::vec3> getNeighbors(glm::vec3 center, Scene& scene) {
     std::vector<glm::vec3> neighbors;
     auto colliders = scene.colliders;
 
-    float step = 2.0f;
-    for (int i = -1; i < 2; ++i)
+    float step = 1.0f;
+    for (int i = -1; i < 2; i += 2)
     {
-        for (int j = -1; j < 2; ++j)
-        {
-            float dx = center.x + step * i;
-            float dz = center.z + step * j;
-            if (j == 0 && i == 0) {
-                continue;
-            }
-            glm::vec3 point(dx, center.y, dz);
-            auto layers = scene.colliders.navMesh.getLayers(point);
-            if (layers[(int)Layer::WALKABLE] && !layers[(int)Layer::IMPASSABLE])
-                neighbors.push_back(point);
-        }
+        float dx = center.x + step * i;
+        float dz = center.z;
+        glm::vec3 point(dx, center.y, dz);
+        auto layers = scene.colliders.navMesh.getLayers(point);
+        if (layers[(int)Layer::WALKABLE] && !layers[(int)Layer::IMPASSABLE])
+            neighbors.push_back(point);
+    }
+    for (int i = -1; i < 2; i += 2)
+    {
+        float dx = center.x;
+        float dz = center.z+ step * i;
+        glm::vec3 point(dx, center.y, dz);
+        auto layers = scene.colliders.navMesh.getLayers(point);
+        if (layers[(int)Layer::WALKABLE] && !layers[(int)Layer::IMPASSABLE])
+            neighbors.push_back(point);
     }
     return neighbors;
 }
 
-std::deque<glm::vec3> aStar(std::shared_ptr<Entity> entity, const glm::vec3 target, Scene& scene) {
+std::deque<glm::vec3> findPath(std::shared_ptr<Entity> entity, const glm::vec3 target, Scene& scene) {
     std::bitset<32> impassable = 1 << (int)Layer::IMPASSABLE;
     int count = 0;
     if (!areClose(entity->transform.position.y, target.y)) {
         return std::deque<glm::vec3>();
     }
     bool lineOfSight = scene.colliders.navMesh.lineOfSight(entity->transform.position, target, impassable);
+
     if (lineOfSight) {
         return { target };
     }
@@ -131,23 +135,15 @@ std::deque<glm::vec3> aStar(std::shared_ptr<Entity> entity, const glm::vec3 targ
 
     while (!candidates.empty()) {
         count++;
-        if (count > 1000) {
-            break;
-        }
         const Candidate& current = candidates.top();
         candidates.pop();
 
-        if (glm::distance(current.position, target) < 0.6f) {
-            return constructPath(cameFrom, current.position, scene);
-        }
-
-        lineOfSight = scene.colliders.navMesh.lineOfSight(current.position, target, impassable);
-        if (lineOfSight) {
+        if (glm::distance(current.position, target) < 1.1f) {
             cameFrom[target] = current.position;
             return constructPath(cameFrom, target, scene);
         }
 
-        for (Candidate candidate : getNeighbors(current.position, entity, scene)) {
+        for (Candidate candidate : getNeighbors(current.position, scene)) {
             if (visited.find(candidate.position) == visited.end()) {
                 gScore[candidate.position] = FLT_MAX;
                 visited.insert(candidate.position);

@@ -43,7 +43,7 @@ struct AABB2D {
     AABB2D::AABB2D() = default;
     AABB2D(glm::vec2 _min, glm::vec2 _max) : min(_min), max(_max) {}
 
-    void AABB2D::print()
+    void AABB2D::print() const
     {
         printf("min: %f, %f, max: %f, %f\n", min.x, min.y, max.x, max.y);
     }

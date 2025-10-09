@@ -253,7 +253,7 @@ Model Renderer::createModel(const std::vector<VertexAttributes>& vertexData, con
     return Model{vertexBuffer, vertexCount, material};
 }
 
-void Renderer::writeUniformBuffer(const Material &material)
+wgpu::Buffer Renderer::writeUniformBuffer(const Material &material)
 {
     // // Create index buffer
     // // (we reuse the bufferDesc initialized for the pointBuffer)
@@ -269,12 +269,14 @@ void Renderer::writeUniformBuffer(const Material &material)
     bufferDesc.size = sizeof(Uniforms);
     bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform;
     bufferDesc.mappedAtCreation = false;
-    uniformBuffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
+    wgpu::Buffer uniformBuffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
 
     wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &material.uniforms, sizeof(Uniforms));
+
+    return uniformBuffer;
 }
 
-void Renderer::initializeBindGroups()
+wgpu::BindGroup Renderer::initializeBindGroups(const wgpu::Buffer& uniformBuffer)
 {
     wgpu::BindGroupEntry binding{};
     binding.nextInChain = nullptr;
@@ -288,25 +290,7 @@ void Renderer::initializeBindGroups()
     bindGroupDesc.layout = pipelineDefaults.defaultBindGroupLayout;
     bindGroupDesc.entryCount = 1;
     bindGroupDesc.entries = &binding;
-    bindGroup = wgpuDeviceCreateBindGroup(device, &bindGroupDesc);
-}
-
-void Renderer::draw(const Model &model)
-{
-    writeUniformBuffer(model.material);
-    initializeBindGroups();
-    createPipeline(model.material.shader);
-
-    renderPass.setPipeline(pipeline);
-    renderPass.setVertexBuffer(0, model.buffer, 0, model.buffer.getSize());
-    // renderPass.setIndexBuffer(indexBuffer, wgpu::IndexFormat::Uint16, 0, indexBuffer.getSize());
-    renderPass.setBindGroup(0, bindGroup, 0, nullptr);
-    // renderPass.drawIndexed(indexCount, 1, 0, 0, 0);
-    renderPass.draw(model.vertexCount, 1, 0, 0);
-    uniformBuffer.release();
-    bindGroup.release();
-    pipeline.release();
-
+    return wgpuDeviceCreateBindGroup(device, &bindGroupDesc);
 }
 
 void Renderer::beginFrame()
@@ -315,6 +299,22 @@ void Renderer::beginFrame()
     targetView = getNextSurfaceTextureView();
     encoder = device.createCommandEncoder();
     createRenderPass();
+}
+
+void Renderer::draw(const Model &model)
+{
+    wgpu::Buffer uniformBuffer = writeUniformBuffer(model.material);
+    wgpu::BindGroup bindGroup = initializeBindGroups(uniformBuffer);
+    wgpu::RenderPipeline pipeline = createPipeline(model.material.shader);
+
+    renderPass.setPipeline(pipeline);
+    renderPass.setVertexBuffer(0, model.buffer, 0, model.buffer.getSize());
+    renderPass.setBindGroup(0, bindGroup, 0, nullptr);
+    renderPass.draw(model.vertexCount, 1, 0, 0);
+    uniformBuffer.release();
+    bindGroup.release();
+    pipeline.release();
+
 }
 
 void Renderer::endFrame()
@@ -341,7 +341,7 @@ void Renderer::endFrame()
 #endif
 }
 
-void Renderer::createPipeline(const wgpu::ShaderModule& shaderModule)
+wgpu::RenderPipeline Renderer::createPipeline(const wgpu::ShaderModule& shaderModule)
 {
     wgpu::RenderPipelineDescriptor pipelineDesc{};
     pipelineDesc.nextInChain = nullptr;
@@ -397,7 +397,7 @@ void Renderer::createPipeline(const wgpu::ShaderModule& shaderModule)
 
     pipelineDesc.layout = pipelineDefaults.defaultLayout;
 
-    pipeline = device.createRenderPipeline(pipelineDesc);
+    return device.createRenderPipeline(pipelineDesc);
 }
 
 wgpu::Adapter Renderer::requestAdapterSync(WGPUInstance instance, WGPURequestAdapterOptions const *options)

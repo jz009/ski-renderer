@@ -51,12 +51,11 @@ struct Player : Entity
             if (!colliders.empty()) {
                 RayCollision collision = colliders.front();
                 if (collision.collider.layerMask[(int)Layer::WALKABLE] && areClose(collision.intersection.near.y, collision.collider.box.max.y)) {
-                    auto path = aStar(shared_from_this(), collision.intersection.near, scene);
+                    auto path = findPath(shared_from_this(), collision.intersection.near, scene);
                     movement.targetPath = path;
                 }
             }
         }
-
         transform.position = movement.move(transform.position);
         updateModel(model, transform, *scene.camera);
         collider->transformBox(model.material.uniforms.modelMatrix);

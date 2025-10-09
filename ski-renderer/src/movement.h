@@ -9,4 +9,4 @@ struct Movement
     glm::vec3 move(glm::vec3 position);
 };
 
-std::deque<glm::vec3> aStar(std::shared_ptr<Entity> entity, glm::vec3 target, Scene& scene);
+std::deque<glm::vec3> findPath(std::shared_ptr<Entity> entity, glm::vec3 target, Scene& scene);

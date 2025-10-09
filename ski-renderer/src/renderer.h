@@ -28,24 +28,20 @@ GLFWwindow *window;
 
 Renderer::Renderer();
 
-void terminate();
-bool isRunning();
-
-void draw(const Model& model);
-void endFrame();
-void beginFrame();
-
 Model createModel(const std::vector<VertexAttributes>& vertexData, const Material& material);
 Material createMaterial(const std::filesystem::path &shaderPath, const Uniforms& uniforms);
-
+void terminate();
+bool isRunning();
+void draw(const Model& model);
+wgpu::Buffer writeUniformBuffer(const Material& material);
+wgpu::BindGroup  initializeBindGroups(const wgpu::Buffer& uniformBuffer);
+wgpu::RenderPipeline createPipeline(const wgpu::ShaderModule& shaderModule);
+void endFrame();
+void beginFrame();
 wgpu::TextureView getNextSurfaceTextureView();
 void createRenderPass();
-
 void initializePipelineDefaults();
-void writeUniformBuffer(const Material& material);
-void initializeBindGroups();
-void createPipeline(const wgpu::ShaderModule& shaderModule);
-
+void createTexture();
 
 wgpu::Adapter requestAdapterSync(WGPUInstance instance, WGPURequestAdapterOptions const *options);
 wgpu::Device requestDeviceSync(WGPUAdapter adapter, WGPUDeviceDescriptor const *descriptor);
@@ -54,16 +50,8 @@ wgpu::Device device;
 wgpu::Queue queue;
 wgpu::Surface surface;
 wgpu::TextureFormat surfaceFormat = wgpu::TextureFormat::Undefined;
-wgpu::RenderPipeline pipeline;
-wgpu::Buffer pointBuffer;
-wgpu::Buffer indexBuffer;
-wgpu::Buffer uniformBuffer;
 wgpu::TextureView targetView;
-
-wgpu::BindGroup bindGroup;
-
 wgpu::RenderPassEncoder renderPass;
 wgpu::CommandEncoder encoder;
-
 PipelineDefaults pipelineDefaults;
 };

@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <unordered_set>
 #include <chrono>
+#include <set>
 
 #define DISALLOW_IMPLICIT_COPIES(T) \
     T(T&&) = default; \
@@ -46,6 +47,7 @@ struct BoxCollider;
 struct Scene;
 struct Camera;
 struct Raycast;
+struct Player;
 
 struct Constants
 {
