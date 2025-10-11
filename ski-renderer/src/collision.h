@@ -22,12 +22,12 @@ struct Raycast
     }
 };
 
-enum struct Layer
+enum Layer
 {
-    NONE,
-    PLAYER,
-    WALKABLE,
-    IMPASSABLE,
+    NONE = 1 << 0,
+    PLAYER = 1 << 1,
+    WALKABLE = 1 << 2,
+    IMPASSABLE = 1 << 3,
 };
 
 struct RayIntersection
@@ -42,7 +42,7 @@ struct BoxCollider
     AABB box;
     std::bitset<32> layerMask;
 
-    void createCollider(AABB _box, const std::vector<Layer>& _layers);
+    BoxCollider(AABB _box, std::bitset<32> layers) : box(_box), layerMask(layers) {};
     RayIntersection rayBoxIntersect(Raycast ray);
     void transformBox(const glm::mat4x4& modelMatrix);
 };
@@ -68,15 +68,11 @@ struct NavMesh {
     std::vector<NavMeshBox> polygons;
 
     NavMesh() {}
-    NavMesh(std::vector<std::shared_ptr<BoxCollider>> colliders) {
-        polygons.reserve(colliders.size());
-        for (std::shared_ptr<BoxCollider> box : colliders) {
-            polygons.push_back(NavMeshBox(box->box, box->layerMask));
-        }
-    }
+    NavMesh(std::vector<std::shared_ptr<BoxCollider>> colliders);
 
     std::bitset<32> getLayers(glm::vec3 point);
-    bool lineOfSight(glm::vec3 a, glm::vec3 b, std::bitset<32> layerMask);
+    bool lineOfSight(glm::vec3 a, glm::vec3 b);
+    bool overlaps(AABB box);
     void print() {
         for (const NavMeshBox& box : polygons) {
             box.box.print();
@@ -98,3 +94,5 @@ struct ColliderTree {
 
 
 Raycast getRayFromMouse(float mouseX, float mouseY, const glm::mat4& view, const glm::mat4& proj);
+bool isWalkable(std::bitset<32> layerMask);
+bool isImpassable(std::bitset<32> layerMask);

@@ -8,20 +8,27 @@ glm::vec3 posOnCircle(glm::vec3 target, float& theta, float delta, float radius,
 enum struct CameraState {
     NONE,
     DRAG,
+    FIRST_PERSON,
+};
+
+enum struct CameraType {
+    CircleBoundCamera,
+    FirstPersonCamera,
 };
 
 struct Camera
 {
     DISALLOW_IMPLICIT_COPIES(Camera)
-    
+
     glm::vec3 position;
     glm::vec3 target;
     glm::vec3 up;
+    glm::vec3 direction;
     float ratio;
     float focalLength;
     float near;
     float far;
-    glm::vec2 dragStart;
+    glm::vec2 lastFrameMousePos;
     CameraState state = CameraState::NONE;
 
     Camera::Camera()
@@ -29,6 +36,7 @@ struct Camera
         position = glm::vec3(0.0f, 20.0f, 0.0f);
         target = glm::vec3(0.0f, 0.0f, 0.0f);
         up = glm::vec3(0.0f, 1.0f, 0.0f);
+        direction = glm::vec3(1.0f, 0.0f, 0.0f);
         ratio = (float)Constants::WIDTH / (float)Constants::HEIGHT;
         focalLength = 1.0;
         near = 0.01f;
@@ -37,6 +45,7 @@ struct Camera
 
     virtual void onFrame(Scene&, const Input&) {};
     void moveCamera(glm::vec3 _position);
+    void Camera::aimCamera(glm::vec3 target);
 
 };
 
@@ -52,4 +61,19 @@ struct CircleBoundCamera : Camera {
         position = posOnCircle(target, thetaPosition, 0.0f, _radius, position.y);
     }
     void onFrame(Scene& scene, const Input& input) override;
+};
+
+struct FirstPersonCamera : Camera {
+    float thetaPosition;
+    float pitch;
+    float yaw;
+    float sensitivity;
+    void onFrame(Scene& scene, const Input& input) override;
+
+    FirstPersonCamera::FirstPersonCamera() {
+        focalLength = 1.0;
+        near = 0.01f;
+        far = 100.0f;
+        sensitivity = 0.25f;
+    }
 };

@@ -9,11 +9,10 @@
 #include "camera.h"
 #include "scene.h"
 
-std::shared_ptr<Player> createPlayer(const std::string& name, const AABB& boundingBox, const std::vector<Layer>& layers, const Model& model, const Transform& transform, std::array<float, 4Ui64> color, const Scene& scene) {
+std::shared_ptr<Player> createPlayer(const std::string& name, const AABB& boundingBox, std::bitset<32> layers, const Model& model, const Transform& transform, std::array<float, 4Ui64> color, const Scene& scene) {
 	auto player = std::make_shared<Player>();
 	player->name = name;
-	auto collider = std::make_shared<BoxCollider>();
-	collider->createCollider(boundingBox, layers);
+	auto collider = std::make_shared<BoxCollider>(boundingBox, layers);
 	player->collider = collider;
 	player->model = model;
 	player->transform = transform;
@@ -23,11 +22,10 @@ std::shared_ptr<Player> createPlayer(const std::string& name, const AABB& boundi
 	return player;
 }
 
-std::shared_ptr<Terrain> createTerrain(const std::string& name, const AABB& boundingBox, const std::vector<Layer>& layers, const Model& model, const Transform& transform, std::array<float, 4Ui64> color, const Scene& scene) {
+std::shared_ptr<Terrain> createTerrain(const std::string& name, const AABB& boundingBox, std::bitset<32> layers, const Model& model, const Transform& transform, std::array<float, 4Ui64> color, const Scene& scene) {
 	auto terrain = std::make_shared<Terrain>();
 	terrain->name = name;
-	auto collider = std::make_shared<BoxCollider>();
-	collider->createCollider(boundingBox, layers);
+	auto collider = std::make_shared<BoxCollider>(boundingBox, layers);
 	terrain->collider = collider;
 	terrain->model = model;
 	terrain->transform = transform;
@@ -44,17 +42,16 @@ int main()
 	int count = 0;
 	Input input(window);
 
-	auto camera = std::make_unique<CircleBoundCamera>(20.0f);
-	Scene scene(std::move(camera));
+	Scene scene;
 
 	Material basic = renderer.createMaterial(Constants::sDEFAULT, Uniforms(*scene.camera));
 	ObjResult cubeObj = loadObj(Constants::mCUBE);
 	Model cube = renderer.createModel(cubeObj.vertexData, basic);
 
-	auto player = createPlayer("player", cubeObj.box, { Layer::PLAYER }, cube, Transform(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0)), { 0.7f, 0.3f, 0.3f, 1.0 }, scene);
-	auto terrain = createTerrain("ground", cubeObj.box, { Layer::WALKABLE }, cube, Transform(glm::vec3(20.0, 1.0, 20.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.3f, 1.0f, 0.0, 1.0 }, scene);
-	auto terrain2 = createTerrain("wall1", cubeObj.box, { Layer::IMPASSABLE }, cube, Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.8f, 0.8f, 0.8f, 1.0 }, scene);
-	auto terrain3 = createTerrain("wall2", cubeObj.box, { Layer::IMPASSABLE }, cube, Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-20.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.8f, 0.8f, 0.8f, 1.0 }, scene);
+	auto player = createPlayer("player", cubeObj.box, Layer::PLAYER, cube, Transform(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0)), { 0.7f, 0.3f, 0.3f, 1.0 }, scene);
+	auto terrain = createTerrain("ground", cubeObj.box, Layer::WALKABLE, cube, Transform(glm::vec3(20.0, 1.0, 20.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.3f, 1.0f, 0.0, 1.0 }, scene);
+	auto terrain2 = createTerrain("wall1", cubeObj.box, Layer::IMPASSABLE, cube, Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.8f, 0.8f, 0.8f, 1.0 }, scene);
+	auto terrain3 = createTerrain("wall2", cubeObj.box, Layer::IMPASSABLE, cube, Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-20.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.8f, 0.8f, 0.8f, 1.0 }, scene);
 
 	scene.addEntity(player);
 	scene.addEntity(terrain);
@@ -78,6 +75,7 @@ int main()
 
 		count = count + 1;
 		renderer.beginFrame();
+		scene.camera->onFrame(scene, input);
 		for (const auto& entity : scene.entities)
 		{
 			entity->onFrame(scene, input);
@@ -86,7 +84,6 @@ int main()
 				renderer.draw(*model);
 			}
 		}
-		scene.camera->onFrame(scene, input);
 		renderer.endFrame();
 		input.clear();
 		Time::lastFrame = Time::thisFrame;

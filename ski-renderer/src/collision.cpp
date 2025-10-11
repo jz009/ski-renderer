@@ -5,14 +5,6 @@
 #include "entity.h"
 #include "AABB.h"
 
-void BoxCollider::createCollider(AABB _box, const std::vector<Layer>& _layers) {
-    box = _box;
-    for (Layer i : _layers)
-    {
-        layerMask[(int)i] = 1;
-    }
-}
-
 void ColliderTree::add(std::shared_ptr<BoxCollider> collider) {
     colliders.push_back(collider);
 };
@@ -100,13 +92,41 @@ std::bitset<32> NavMesh::getLayers(glm::vec3 point) {
     return layers;
 }
 
-bool NavMesh::lineOfSight(glm::vec3 a, glm::vec3 b, std::bitset<32> layerMask) {
+NavMesh::NavMesh(std::vector<std::shared_ptr<BoxCollider>> colliders) {
+        polygons.reserve(colliders.size());
+        for (std::shared_ptr<BoxCollider> box : colliders) {
+            if (isWalkable(box->layerMask) || isImpassable(box->layerMask)) {
+                polygons.push_back(NavMeshBox(box->box, box->layerMask));
+            }
+        }
+    }
+
+bool NavMesh::lineOfSight(glm::vec3 a, glm::vec3 b) {
     for (const NavMeshBox& polygon : polygons) {
-        if ((polygon.layerMask & layerMask) == polygon.layerMask) {
+        if (isImpassable(polygon.layerMask)) {
             if (polygon.box.lineIntersect(glm::vec2(a.x, a.z), glm::vec2(b.x, b.z))) {
                 return false;
             }
         }
     }
     return true;
+}
+
+bool NavMesh::overlaps(AABB box) {
+    for (const NavMeshBox& polygon : polygons) {
+        if (isImpassable(polygon.layerMask)) {
+            if (polygon.box.boxOverlap(box)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool isWalkable(std::bitset<32> layerMask) {
+    return (layerMask & std::bitset<32>((int)Layer::WALKABLE)) != 0;
+}
+
+bool isImpassable(std::bitset<32> layerMask) {
+    return (layerMask & std::bitset<32>(Layer::IMPASSABLE)) != 0;
 }

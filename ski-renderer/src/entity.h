@@ -42,15 +42,17 @@ struct Player : Entity
     Movement movement;
     void onFrame(Scene& scene, const Input& input) override
     {
-        bool leftButtonPressed = input.mouseClickInput.fresh && input.mouseClickInput.button == GLFW_MOUSE_BUTTON_LEFT && input.mouseClickInput.action == GLFW_PRESS;
-        if (leftButtonPressed)
+        if (scene.camera->state == CameraState::FIRST_PERSON) {
+            firstPersonOnFrame(scene, input);
+        }
+        if (input.wasMousePressed(GLFW_MOUSE_BUTTON_LEFT))
         {
             glm::vec2 mousePos = input.mouseClickInput.mousePos;
             Raycast ray = getRayFromMouse(mousePos.x, mousePos.y, model.material.uniforms.viewMatrix, model.material.uniforms.projectionMatrix);
             auto colliders = scene.colliders.getRayCollisions(ray);
             if (!colliders.empty()) {
                 RayCollision collision = colliders.front();
-                if (collision.collider.layerMask[(int)Layer::WALKABLE] && areClose(collision.intersection.near.y, collision.collider.box.max.y)) {
+                if (isWalkable(collision.collider.layerMask) && areClose(collision.intersection.near.y, collision.collider.box.max.y)) {
                     auto path = findPath(shared_from_this(), collision.intersection.near, scene);
                     movement.targetPath = path;
                 }
@@ -60,6 +62,8 @@ struct Player : Entity
         updateModel(model, transform, *scene.camera);
         collider->transformBox(model.material.uniforms.modelMatrix);
     }
+
+    void firstPersonOnFrame(Scene& scene, const Input& input);
 
     Model* getModel() override {
         return &model;

@@ -40,6 +40,10 @@ template<> struct std::equal_to<Candidate> {
     }
 };
 
+glm::vec3 Movement::firstPersonMove(glm::vec3 position, glm::vec3 direction) {
+    return position + (glm::normalize(glm::vec3(direction.x, 0.0f, direction.z)) * Time::deltaTime * 10.0f);
+}
+
 glm::vec3 Movement::move(glm::vec3 position)
 {
     if (targetPath.size() == 0) {
@@ -71,7 +75,7 @@ std::deque<glm::vec3> constructPath(std::unordered_map<glm::vec3, glm::vec3> cam
     while (cameFrom.count(current)) {
         glm::vec3 parent = current;
         current = cameFrom[current];
-        if (scene.colliders.navMesh.lineOfSight(current, last, 1 << (int)Layer::IMPASSABLE)) {
+        if (scene.colliders.navMesh.lineOfSight(current, last)) {
             path.pop_front();
             path.push_front(current);
         }
@@ -94,7 +98,7 @@ std::vector<glm::vec3> getNeighbors(glm::vec3 center, Scene& scene) {
         float dz = center.z;
         glm::vec3 point(dx, center.y, dz);
         auto layers = scene.colliders.navMesh.getLayers(point);
-        if (layers[(int)Layer::WALKABLE] && !layers[(int)Layer::IMPASSABLE])
+        if (isWalkable(layers) && !isImpassable(layers))
             neighbors.push_back(point);
     }
     for (int i = -1; i < 2; i += 2)
@@ -103,19 +107,18 @@ std::vector<glm::vec3> getNeighbors(glm::vec3 center, Scene& scene) {
         float dz = center.z+ step * i;
         glm::vec3 point(dx, center.y, dz);
         auto layers = scene.colliders.navMesh.getLayers(point);
-        if (layers[(int)Layer::WALKABLE] && !layers[(int)Layer::IMPASSABLE])
+        if (isWalkable(layers) && !isImpassable(layers))
             neighbors.push_back(point);
     }
     return neighbors;
 }
 
 std::deque<glm::vec3> findPath(std::shared_ptr<Entity> entity, const glm::vec3 target, Scene& scene) {
-    std::bitset<32> impassable = 1 << (int)Layer::IMPASSABLE;
     int count = 0;
     if (!areClose(entity->transform.position.y, target.y)) {
         return std::deque<glm::vec3>();
     }
-    bool lineOfSight = scene.colliders.navMesh.lineOfSight(entity->transform.position, target, impassable);
+    bool lineOfSight = scene.colliders.navMesh.lineOfSight(entity->transform.position, target);
 
     if (lineOfSight) {
         return { target };

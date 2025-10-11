@@ -28,12 +28,18 @@ struct Input
     void onKeyPress(int key, int scancode, int action, int mods);
     void onMouseClick(int button, int action, int mods);
     void onMouseMove(glm::vec2 mousePos);
+    void setMouseModeVisible() const;
+    void setMouseModeInvisible() const;
+    bool isPressed(int key) const;
+    bool wasPressed(int key) const;
+    bool wasReleased(int key) const;
+    bool wasMousePressed(int button) const;
+    bool wasMouseReleased(int button) const;
     void clear();
     KeyboardInput keyboardInput = { false };
     MouseClickInput mouseClickInput = { false };
+    std::array<bool, 512> keyState;
     glm::vec2 mousePosition;
     GLFWwindow* window;
-
-    //Input() {}
 };
 

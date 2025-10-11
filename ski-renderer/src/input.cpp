@@ -33,6 +33,7 @@ void Input::clear()
 Input::Input(GLFWwindow* window_)
 {
     window = window_;
+    keyState = {};
     glfwSetWindowUserPointer(window, this);
     glfwSetKeyCallback(window, keyCallback);
     glfwSetMouseButtonCallback(window, mouseButtonCallback);
@@ -44,6 +45,18 @@ void Input::onKeyPress(int key, int scancode, int action, int mods)
     double xpos, ypos;
     glfwGetCursorPos(window, &xpos, &ypos);
     keyboardInput = { true, key, scancode, action, mods, glm::vec2((float)xpos, (float)ypos) };
+    if (action == GLFW_PRESS)
+    {
+        keyState[key] = 1;
+    }
+    else if (action == GLFW_RELEASE)
+    {
+        keyState[key] = 0;
+    }
+
+    if (keyState[GLFW_KEY_ESCAPE]) {
+        glfwSetWindowShouldClose(window, GL_TRUE);
+    }
 }
 
 void Input::onMouseClick(int button, int action, int mods)
@@ -56,4 +69,31 @@ void Input::onMouseClick(int button, int action, int mods)
 void Input::onMouseMove(glm::vec2 mousePos)
 {
     mousePosition = mousePos;
+}
+
+void Input::setMouseModeVisible() const {
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+}
+
+void Input::setMouseModeInvisible() const {
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+}
+
+bool Input::isPressed(int key) const {
+    return keyState[key];
+}
+
+bool Input::wasPressed(int key) const {
+    return keyboardInput.fresh && keyboardInput.key == key && keyboardInput.action == GLFW_PRESS;
+}
+
+bool Input::wasReleased(int key) const {
+    return keyboardInput.fresh && keyboardInput.key == key && keyboardInput.action == GLFW_RELEASE;
+}
+
+bool Input::wasMousePressed(int button) const {
+    return mouseClickInput.fresh && mouseClickInput.button == button && mouseClickInput.action == GLFW_PRESS;
+}
+bool Input::wasMouseReleased(int button) const {
+    return mouseClickInput.fresh && mouseClickInput.button == button && mouseClickInput.action == GLFW_RELEASE;
 }

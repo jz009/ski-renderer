@@ -9,7 +9,16 @@ void Camera::moveCamera(glm::vec3 _position) {
     position = _position;
 }
 
-void CircleBoundCamera::onFrame(Scene&, const Input& input) {
+void Camera::aimCamera(glm::vec3 _target) {
+    target = _target;
+}
+
+void CircleBoundCamera::onFrame(Scene& scene, const Input& input) {
+    if (input.wasPressed(GLFW_KEY_LEFT_SHIFT)) {
+        scene.useCamera(CameraType::FirstPersonCamera, input);
+        return;
+    }
+
     glm::vec2 mousePos = glm::vec2(input.mousePosition);
     float s = speed;
 
@@ -18,14 +27,14 @@ void CircleBoundCamera::onFrame(Scene&, const Input& input) {
 
     if (scrollWheelPressed) {
         state = CameraState::DRAG;
-        dragStart = mousePos;
+        lastFrameMousePos = mousePos;
     }
     if (scrollWheelReleased) {
         state = CameraState::NONE;
     }
 
     if (state == CameraState::DRAG) {
-        glm::vec2 offset = (mousePos - dragStart) / 10.0f;
+        glm::vec2 offset = (mousePos - lastFrameMousePos) / 10.0f;
         if (offset.x < 0) {
             float deltaX = offset.x * std::cos(thetaPosition + (90 * Constants::D2R));
             float deltaZ = offset.x * std::sin(thetaPosition + (90 * Constants::D2R));
@@ -50,7 +59,7 @@ void CircleBoundCamera::onFrame(Scene&, const Input& input) {
         position.x -= deltaX;
         position.z -= deltaZ;
 
-        dragStart = mousePos;
+        lastFrameMousePos = mousePos;
     }
 
     if (state == CameraState::NONE && mousePos.x < Constants::WIDTH / 10) {
@@ -66,6 +75,23 @@ void CircleBoundCamera::onFrame(Scene&, const Input& input) {
         }
         moveCamera(posOnCircle(target, thetaPosition, s, radius, position.y));
     }
+}
+
+void FirstPersonCamera::onFrame(Scene&, const Input& input) {
+    glm::vec2 offset =lastFrameMousePos - input.mousePosition;
+    offset.x *= sensitivity;
+    offset.y *= sensitivity;
+    yaw += offset.x;
+    pitch += offset.y;
+    pitch = std::clamp(pitch, -89.0f, 89.0f);
+    yaw = std::clamp(yaw, -360.0f, 360.0f);
+    if (yaw == 360.0f || yaw == -360.f) {
+        yaw = 0.0f;
+    }
+
+    direction = glm::normalize(glm::vec3(std::cos(yaw * Constants::D2R) * std::cos(pitch * Constants::D2R), std::sin(pitch * Constants::D2R), std::sin(yaw * Constants::D2R) * std::cos(pitch * Constants::D2R)));
+    aimCamera(position + direction);
+    lastFrameMousePos = input.mousePosition;
 }
 
 glm::vec3 posOnCircle(glm::vec3 target, float& theta, float delta, float radius, float yPos) {
