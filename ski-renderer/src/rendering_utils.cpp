@@ -104,7 +104,15 @@ std::vector<VertexAttributes> load2D(const std::filesystem::path &geometry)
     return vertexData;
 }
 
-void updateModel(Model& model, const Transform& transform, const Camera& camera) {
-    model.material.uniforms.modelMatrix = glm::translate(glm::mat4x4(1.0), transform.offset) * glm::translate(glm::mat4x4(1.0), transform.position) * glm::scale(glm::mat4x4(1.0), transform.scale);
-    model.material.uniforms.viewMatrix = glm::lookAt(camera.position, camera.target, camera.up);
+glm::mat4x4 calculateModelMatrix(const Transform& transform) {
+   return glm::translate(glm::mat4x4(1.0), transform.offset) * glm::translate(glm::mat4x4(1.0), transform.position) * glm::scale(glm::mat4x4(1.0), transform.scale);
+    
+}
+
+glm::mat4x4 calculateViewMatrix(const Camera& camera) {
+   return glm::lookAt(camera.position, camera.target, camera.up);
+}
+
+glm::mat4x4 calculateProjectionMatrix(const Camera& camera) {
+    return glm::perspective(2 * glm::atan(1 / camera.focalLength), camera.ratio, camera.near, camera.far);
 }

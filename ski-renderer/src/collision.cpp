@@ -5,20 +5,6 @@
 #include "entity.h"
 #include "AABB.h"
 
-void ColliderTree::add(std::shared_ptr<BoxCollider> collider) {
-    colliders.push_back(collider);
-};
-
-std::vector<BoxCollision> ColliderTree::getBoxCollisions(AABB box) {
-    std::vector<BoxCollision> collisions;
-    for (std::shared_ptr<BoxCollider> collider : colliders) {
-        if (box.boxOverlap(collider->box, glm::vec3{ 0.0f, 0.1f, 0.0f })) {
-            collisions.push_back({ collider });
-        }
-    }
-    return collisions;
-}
-
 RayIntersection BoxCollider::rayBoxIntersect(Raycast ray)
 {
     float tmin, tmax, tymin, tymax, tzmin, tzmax;
@@ -44,24 +30,10 @@ RayIntersection BoxCollider::rayBoxIntersect(Raycast ray)
     return RayIntersection{ ((tmin < ray.maxLength) && (tmax > 0.0f)), ray.origin + std::max(std::max(tmin, tymin), tzmin) * ray.direction, ray.origin + std::min(std::min(tmax, tymax), tzmax) * ray.direction };
 }
 
-std::vector<RayCollision> ColliderTree::getRayCollisions(const Raycast& ray) const
-{
-    std::vector<RayCollision> collisions;
-    for (std::shared_ptr<BoxCollider> collider : colliders)
-    {
-        RayIntersection intersection = collider->rayBoxIntersect(ray);
-        if (intersection.intersected)
-        {
-            collisions.push_back(RayCollision{ *collider, intersection });
-        }
-    }
-    return collisions;
-}
-
 void BoxCollider::transformBox(const glm::mat4x4& modelMatrix)
 {
-    box.min = modelMatrix * glm::vec4(box.baseMin, 1.0f);
-    box.max = modelMatrix * glm::vec4(box.baseMax, 1.0f);
+    box.min = modelMatrix * glm::vec4(unscaledBox.min, 1.0f);
+    box.max = modelMatrix * glm::vec4(unscaledBox.max, 1.0f);
 }
 
 Raycast getRayFromMouse(
@@ -78,10 +50,6 @@ Raycast getRayFromMouse(
     return Raycast(nearPoint, direction, 100.0f);
 }
 
-void ColliderTree::bakeNavMesh() {
-    navMesh = NavMesh(colliders);
-}
-
 std::bitset<32> NavMesh::getLayers(glm::vec3 point) {
     std::bitset<32> layers;
     for (const NavMeshBox& polygon : polygons) {
@@ -92,14 +60,14 @@ std::bitset<32> NavMesh::getLayers(glm::vec3 point) {
     return layers;
 }
 
-NavMesh::NavMesh(std::vector<std::shared_ptr<BoxCollider>> colliders) {
-        polygons.reserve(colliders.size());
-        for (std::shared_ptr<BoxCollider> box : colliders) {
-            if (isWalkable(box->layerMask) || isImpassable(box->layerMask)) {
-                polygons.push_back(NavMeshBox(box->box, box->layerMask));
-            }
+NavMesh::NavMesh(std::vector<std::shared_ptr<Entity>> entities) {
+    polygons.reserve(entities.size());
+    for (std::shared_ptr<Entity> entity : entities) {
+        if (isWalkable(entity->collider.layerMask) || isImpassable(entity->collider.layerMask)) {
+            polygons.push_back(NavMeshBox(entity->collider.box, entity->collider.layerMask));
         }
     }
+}
 
 bool NavMesh::lineOfSight(glm::vec3 a, glm::vec3 b) {
     for (const NavMeshBox& polygon : polygons) {
@@ -116,11 +84,11 @@ bool NavMesh::overlaps(AABB box) {
     for (const NavMeshBox& polygon : polygons) {
         if (isImpassable(polygon.layerMask)) {
             if (polygon.box.boxOverlap(box)) {
-                return false;
+                return true;
             }
         }
     }
-    return true;
+    return false;
 }
 
 bool isWalkable(std::bitset<32> layerMask) {

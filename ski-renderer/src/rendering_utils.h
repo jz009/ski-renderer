@@ -54,4 +54,6 @@ struct Model
 
 ObjResult loadObj(const std::filesystem::path& geometry);
 std::vector<VertexAttributes> load2D(const std::filesystem::path& geometry);
-void updateModel(Model& model, const Transform& transform, const Camera& camera);
+glm::mat4x4 calculateModelMatrix(const Transform& transform);
+glm::mat4x4 calculateViewMatrix(const Camera& camera);
+glm::mat4x4 calculateProjectionMatrix(const Camera& camera);

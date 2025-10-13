@@ -75,7 +75,7 @@ std::deque<glm::vec3> constructPath(std::unordered_map<glm::vec3, glm::vec3> cam
     while (cameFrom.count(current)) {
         glm::vec3 parent = current;
         current = cameFrom[current];
-        if (scene.colliders.navMesh.lineOfSight(current, last)) {
+        if (scene.navMesh.lineOfSight(current, last)) {
             path.pop_front();
             path.push_front(current);
         }
@@ -89,7 +89,6 @@ std::deque<glm::vec3> constructPath(std::unordered_map<glm::vec3, glm::vec3> cam
 
 std::vector<glm::vec3> getNeighbors(glm::vec3 center, Scene& scene) {
     std::vector<glm::vec3> neighbors;
-    auto colliders = scene.colliders;
 
     float step = 1.0f;
     for (int i = -1; i < 2; i += 2)
@@ -97,7 +96,7 @@ std::vector<glm::vec3> getNeighbors(glm::vec3 center, Scene& scene) {
         float dx = center.x + step * i;
         float dz = center.z;
         glm::vec3 point(dx, center.y, dz);
-        auto layers = scene.colliders.navMesh.getLayers(point);
+        auto layers = scene.navMesh.getLayers(point);
         if (isWalkable(layers) && !isImpassable(layers))
             neighbors.push_back(point);
     }
@@ -106,7 +105,7 @@ std::vector<glm::vec3> getNeighbors(glm::vec3 center, Scene& scene) {
         float dx = center.x;
         float dz = center.z+ step * i;
         glm::vec3 point(dx, center.y, dz);
-        auto layers = scene.colliders.navMesh.getLayers(point);
+        auto layers = scene.navMesh.getLayers(point);
         if (isWalkable(layers) && !isImpassable(layers))
             neighbors.push_back(point);
     }
@@ -118,7 +117,7 @@ std::deque<glm::vec3> findPath(std::shared_ptr<Entity> entity, const glm::vec3 t
     if (!areClose(entity->transform.position.y, target.y)) {
         return std::deque<glm::vec3>();
     }
-    bool lineOfSight = scene.colliders.navMesh.lineOfSight(entity->transform.position, target);
+    bool lineOfSight = scene.navMesh.lineOfSight(entity->transform.position, target);
 
     if (lineOfSight) {
         return { target };

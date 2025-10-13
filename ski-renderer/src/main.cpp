@@ -9,29 +9,27 @@
 #include "camera.h"
 #include "scene.h"
 
-std::shared_ptr<Player> createPlayer(const std::string& name, const AABB& boundingBox, std::bitset<32> layers, const Model& model, const Transform& transform, std::array<float, 4Ui64> color, const Scene& scene) {
-	auto player = std::make_shared<Player>();
+std::shared_ptr<Player> createPlayer(const std::string& name, const AABB& boundingBox, std::bitset<32> layers, Model& model, const Transform& transform, std::array<float, 4Ui64> color, const Scene& scene) {
+	auto player = std::make_shared<Player>(BoxCollider(boundingBox, layers));
 	player->name = name;
-	auto collider = std::make_shared<BoxCollider>(boundingBox, layers);
-	player->collider = collider;
 	player->model = model;
 	player->transform = transform;
 	player->model.material.uniforms.color = color;
-	updateModel(player->model, transform, *scene.camera);
-	player->collider->transformBox(model.material.uniforms.modelMatrix);
+	model.material.uniforms.modelMatrix = calculateModelMatrix(transform);
+	model.material.uniforms.viewMatrix = calculateViewMatrix(*scene.camera);
+	player->collider.transformBox(model.material.uniforms.modelMatrix);
 	return player;
 }
 
-std::shared_ptr<Terrain> createTerrain(const std::string& name, const AABB& boundingBox, std::bitset<32> layers, const Model& model, const Transform& transform, std::array<float, 4Ui64> color, const Scene& scene) {
-	auto terrain = std::make_shared<Terrain>();
+std::shared_ptr<Terrain> createTerrain(const std::string& name, const AABB& boundingBox, std::bitset<32> layers, Model& model, const Transform& transform, std::array<float, 4Ui64> color, const Scene& scene) {
+	auto terrain = std::make_shared<Terrain>(BoxCollider(boundingBox, layers));
 	terrain->name = name;
-	auto collider = std::make_shared<BoxCollider>(boundingBox, layers);
-	terrain->collider = collider;
 	terrain->model = model;
 	terrain->transform = transform;
 	terrain->model.material.uniforms.color = color;
-	updateModel(terrain->model, transform, *scene.camera);
-	terrain->collider->transformBox(model.material.uniforms.modelMatrix);
+	model.material.uniforms.modelMatrix = calculateModelMatrix(transform);
+	model.material.uniforms.viewMatrix = calculateViewMatrix(*scene.camera);
+	terrain->collider.transformBox(model.material.uniforms.modelMatrix);
 	return terrain;
 }
 
@@ -63,7 +61,10 @@ int main()
 		entity->onFrame(scene, input);
 	}
 
-	scene.colliders.bakeNavMesh();
+	scene.navMesh = NavMesh(scene.entities);
+
+	scene.viewMatrix = calculateViewMatrix(*scene.camera);
+	scene.projectionMatrix = calculateProjectionMatrix(*scene.camera);
 
 	Time::lastFrame = std::chrono::high_resolution_clock::now();
 
@@ -75,10 +76,17 @@ int main()
 
 		count = count + 1;
 		renderer.beginFrame();
+		scene.onFrame(input);
 		scene.camera->onFrame(scene, input);
 		for (const auto& entity : scene.entities)
 		{
-			entity->onFrame(scene, input);
+			if (scene.state == SceneState::GAME) {
+				entity->onFrame(scene, input);
+			} 
+			else if (scene.state == SceneState::EDIT) {
+				scene.editor.onFrame(scene, input);
+				entity->applyMatrices(scene);
+			}
 
 			if (Model* model = entity->getModel()) {
 				renderer.draw(*model);

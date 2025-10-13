@@ -55,6 +55,7 @@ struct Constants
     static constexpr float MAX_RADIANS = (float)M_PI * 2.0f;
     static constexpr uint32_t WIDTH = 1500;
     static constexpr uint32_t HEIGHT = 1000;
+    static constexpr std::array<float, 4> EDIT_COLOR = {1.0f, 0.0f, 0.0f, 1.0f};
 
     static const std::string Constants::mCUBE;
     static const std::string Constants::sDEFAULT;

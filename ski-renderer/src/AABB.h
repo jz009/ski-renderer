@@ -3,13 +3,11 @@
 
 struct AABB
 {
-    glm::vec3 baseMin;
-    glm::vec3 baseMax;
     glm::vec3 min;
     glm::vec3 max;
 
     AABB::AABB() = default;
-    AABB(glm::vec3 _min, glm::vec3 _max) : baseMin(_min), baseMax(_max), min(_min), max(_max) {}
+    AABB(glm::vec3 _min, glm::vec3 _max) : min(_min), max(_max) {}
 
     void AABB::print()
     {

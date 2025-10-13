@@ -14,13 +14,21 @@ struct Entity : std::enable_shared_from_this<Entity>
     bool loaded;
     Model model;
     Transform transform;
-    std::shared_ptr<BoxCollider> collider;
+    BoxCollider collider;
+    int id;
+    std::array<float, 4> color = {0.0f, 1.0f, 0.0f, 1.0f};
     virtual void onFrame(Scene&, const Input&) {}
+    void applyMatrices(const Scene& scene) {
+        model.material.uniforms.modelMatrix = calculateModelMatrix(transform);
+        model.material.uniforms.viewMatrix = scene.viewMatrix;
+        collider.transformBox(model.material.uniforms.modelMatrix);
+    }
     virtual void onLoad() {}
     virtual Model* getModel()
     {
         return nullptr;
     }
+    Entity::Entity(BoxCollider box) : collider(box) {}
 };
 
 struct Terrain : Entity
@@ -29,12 +37,12 @@ struct Terrain : Entity
     {
         (void)scene;
         (void)input;
-        updateModel(model, transform, *scene.camera);
-        collider->transformBox(model.material.uniforms.modelMatrix);
+        applyMatrices(scene);
     }
     Model* getModel() override {
         return &model;
     }
+    Terrain::Terrain(BoxCollider box) : Entity::Entity(box) {}
 };
 
 struct Player : Entity
@@ -42,30 +50,23 @@ struct Player : Entity
     Movement movement;
     void onFrame(Scene& scene, const Input& input) override
     {
-        if (scene.camera->state == CameraState::FIRST_PERSON) {
+        if (scene.camera->type == CameraType::FirstPersonCamera) {
             firstPersonOnFrame(scene, input);
         }
-        if (input.wasMousePressed(GLFW_MOUSE_BUTTON_LEFT))
-        {
-            glm::vec2 mousePos = input.mouseClickInput.mousePos;
-            Raycast ray = getRayFromMouse(mousePos.x, mousePos.y, model.material.uniforms.viewMatrix, model.material.uniforms.projectionMatrix);
-            auto colliders = scene.colliders.getRayCollisions(ray);
-            if (!colliders.empty()) {
-                RayCollision collision = colliders.front();
-                if (isWalkable(collision.collider.layerMask) && areClose(collision.intersection.near.y, collision.collider.box.max.y)) {
-                    auto path = findPath(shared_from_this(), collision.intersection.near, scene);
-                    movement.targetPath = path;
-                }
-            }
+        else if (scene.camera->type == CameraType::CircleBoundCamera) {
+            thirdPersonOnFrame(scene, input);
         }
         transform.position = movement.move(transform.position);
-        updateModel(model, transform, *scene.camera);
-        collider->transformBox(model.material.uniforms.modelMatrix);
+        applyMatrices(scene);
     }
 
     void firstPersonOnFrame(Scene& scene, const Input& input);
+    void thirdPersonOnFrame(Scene& scene, const Input& input);
 
     Model* getModel() override {
         return &model;
     }
+
+    Player::Player(BoxCollider box) : Entity::Entity(box) {}
+
 };

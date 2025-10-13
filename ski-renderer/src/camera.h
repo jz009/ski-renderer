@@ -20,7 +20,7 @@ struct Camera
 {
     DISALLOW_IMPLICIT_COPIES(Camera)
 
-    glm::vec3 position;
+        glm::vec3 position;
     glm::vec3 target;
     glm::vec3 up;
     glm::vec3 direction;
@@ -28,8 +28,10 @@ struct Camera
     float focalLength;
     float near;
     float far;
+    float theta;
     glm::vec2 lastFrameMousePos;
     CameraState state = CameraState::NONE;
+    CameraType type = CameraType::CircleBoundCamera;
 
     Camera::Camera()
     {
@@ -50,21 +52,19 @@ struct Camera
 };
 
 struct CircleBoundCamera : Camera {
-    float thetaPosition;
     float radius;
     float speed;
     CircleBoundCamera::CircleBoundCamera(float _radius)
     {
-        thetaPosition = 0.0f;
+        theta = 0.0f;
         radius = _radius;
         speed = 0.01f;
-        position = posOnCircle(target, thetaPosition, 0.0f, _radius, position.y);
+        position = posOnCircle(target, theta, 0.0f, _radius, position.y);
     }
     void onFrame(Scene& scene, const Input& input) override;
 };
 
 struct FirstPersonCamera : Camera {
-    float thetaPosition;
     float pitch;
     float yaw;
     float sensitivity;
@@ -77,3 +77,5 @@ struct FirstPersonCamera : Camera {
         sensitivity = 0.25f;
     }
 };
+
+glm::vec3 mouseOffsetToWorldDelta(glm::vec2 offset, float theta);
