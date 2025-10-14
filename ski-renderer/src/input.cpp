@@ -79,15 +79,15 @@ void Input::setMouseModeInvisible() const {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
-bool Input::isPressed(int key) const {
+bool Input::isKeyDown(int key) const {
     return keyState[key];
 }
 
-bool Input::wasPressed(int key) const {
+bool Input::wasKeyPressed(int key) const {
     return keyboardInput.fresh && keyboardInput.key == key && keyboardInput.action == GLFW_PRESS;
 }
 
-bool Input::wasReleased(int key) const {
+bool Input::wasKeyReleased(int key) const {
     return keyboardInput.fresh && keyboardInput.key == key && keyboardInput.action == GLFW_RELEASE;
 }
 

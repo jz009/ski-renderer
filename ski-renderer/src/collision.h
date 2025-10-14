@@ -82,6 +82,5 @@ struct NavMesh {
     }
 };
 
-Raycast getRayFromMouse(float mouseX, float mouseY, const glm::mat4& view, const glm::mat4& proj);
 bool isWalkable(std::bitset<32> layerMask);
 bool isImpassable(std::bitset<32> layerMask);

@@ -30,9 +30,9 @@ struct Input
     void onMouseMove(glm::vec2 mousePos);
     void setMouseModeVisible() const;
     void setMouseModeInvisible() const;
-    bool isPressed(int key) const;
-    bool wasPressed(int key) const;
-    bool wasReleased(int key) const;
+    bool isKeyDown(int key) const;
+    bool wasKeyPressed(int key) const;
+    bool wasKeyReleased(int key) const;
     bool wasMousePressed(int button) const;
     bool wasMouseReleased(int button) const;
     void clear();

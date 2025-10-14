@@ -14,7 +14,7 @@ void Camera::aimCamera(glm::vec3 _target) {
 }
 
 void CircleBoundCamera::onFrame(Scene& scene, const Input& input) {
-    if (input.wasPressed(GLFW_KEY_LEFT_SHIFT) && scene.state != SceneState::EDIT) {
+    if (input.wasKeyPressed(GLFW_KEY_LEFT_SHIFT) && scene.isGame()) {
         scene.useCamera(CameraType::FirstPersonCamera, input);
         return;
     }
@@ -38,23 +38,23 @@ void CircleBoundCamera::onFrame(Scene& scene, const Input& input) {
         lastFrameMousePos = mousePos;
     }
 
-    if (state == CameraState::NONE && mousePos.x < Constants::WIDTH / 10) {
+    if (!scene.editor.isDragging() && state == CameraState::NONE && mousePos.x < Constants::WIDTH / 10) {
         if (mousePos.x <= 1) {
             s *= 2;
         }
-        moveCamera(posOnCircle(target, theta, -s, radius, position.y));
+        moveCamera(posOnCircle(-s, position.y));
     }
 
-    else if (state == CameraState::NONE && mousePos.x > Constants::WIDTH - Constants::WIDTH / 10) {
+    else if (!scene.editor.isDragging() && state == CameraState::NONE && mousePos.x > Constants::WIDTH - Constants::WIDTH / 10) {
         if (mousePos.x >= Constants::WIDTH - 1) {
             s *= 2;
         }
-        moveCamera(posOnCircle(target, theta, s, radius, position.y));
+        moveCamera(posOnCircle(s, position.y));
     }
 }
 
 void FirstPersonCamera::onFrame(Scene& scene, const Input& input) {
-    if (input.wasPressed(GLFW_KEY_LEFT_SHIFT)) {
+    if (input.wasKeyPressed(GLFW_KEY_LEFT_SHIFT)) {
         scene.useCamera(CameraType::CircleBoundCamera, input);
         return;
     }
@@ -75,7 +75,7 @@ void FirstPersonCamera::onFrame(Scene& scene, const Input& input) {
     lastFrameMousePos = input.mousePosition;
 }
 
-glm::vec3 posOnCircle(glm::vec3 target, float& theta, float delta, float radius, float yPos) {
+glm::vec3 CircleBoundCamera::posOnCircle(float delta, float yPos) {
     theta += delta;
     return glm::vec3(target.x + radius * std::cos(theta), target.y + yPos, target.z + radius * std::sin(theta));
 }

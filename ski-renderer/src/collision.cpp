@@ -36,20 +36,6 @@ void BoxCollider::transformBox(const glm::mat4x4& modelMatrix)
     box.max = modelMatrix * glm::vec4(unscaledBox.max, 1.0f);
 }
 
-Raycast getRayFromMouse(
-    float mouseX, float mouseY,
-    const glm::mat4& view,
-    const glm::mat4& proj)
-{
-    glm::vec4 viewport(0, 0, Constants::WIDTH, Constants::HEIGHT);
-
-    glm::vec3 nearPoint = glm::unProject(glm::vec3(mouseX, Constants::HEIGHT - mouseY, 0.0f), view, proj, viewport);
-    glm::vec3 farPoint = glm::unProject(glm::vec3(mouseX, Constants::HEIGHT - mouseY, 1.0f), view, proj, viewport);
-
-    glm::vec3 direction = glm::normalize(farPoint - nearPoint);
-    return Raycast(nearPoint, direction, 100.0f);
-}
-
 std::bitset<32> NavMesh::getLayers(glm::vec3 point) {
     std::bitset<32> layers;
     for (const NavMeshBox& polygon : polygons) {

@@ -4,6 +4,14 @@
 #include "scene.h"
 #include "entity.h"
 
+bool Scene::isEditing() {
+	return state == SceneState::EDIT;
+}
+
+bool Scene::isGame() {
+	return state == SceneState::GAME;
+}
+
 void Scene::addEntity(std::shared_ptr<Entity> entity) {
 	entity->id = nextId;
 	entities.push_back(entity);
@@ -24,11 +32,11 @@ void Scene::useCamera(CameraType cameraType, const Input& input) {
 }
 
 void Scene::onFrame(const Input& input) {
-	if (input.wasPressed(GLFW_KEY_E)) {
-		if (state == SceneState::GAME) {
+	if (input.wasKeyPressed(GLFW_KEY_E)) {
+		if (isGame()) {
 			state = SceneState::EDIT;
 		}
-		else if (state == SceneState::EDIT) {
+		else if (isEditing()) {
 			editor.endEditMode(*this);
 			state = SceneState::GAME;
 		}
@@ -51,4 +59,36 @@ std::vector<RayCollision> Scene::getRayCollisions(const Raycast& ray)
 		}
 	}
 	return collisions;
+}
+
+Raycast Scene::getRayFromMouse(glm::vec2 mousePos)
+{
+	glm::vec4 viewport(0, 0, Constants::WIDTH, Constants::HEIGHT);
+
+	glm::vec3 nearPoint = glm::unProject(glm::vec3(mousePos.x, Constants::HEIGHT - mousePos.y, 0.0f), viewMatrix, projectionMatrix, viewport);
+	glm::vec3 farPoint = glm::unProject(glm::vec3(mousePos.x, Constants::HEIGHT - mousePos.y, 1.0f), viewMatrix, projectionMatrix, viewport);
+
+	glm::vec3 direction = glm::normalize(farPoint - nearPoint);
+	return Raycast(nearPoint, direction, 100.0f);
+}
+
+glm::vec3 Scene::getWorldPosFromMouseAtY(glm::vec2 mousePos, float y) {
+	Raycast ray = getRayFromMouse(mousePos);
+	float t = (y - ray.origin.y) / ray.direction.y;
+	float x = ray.origin.x + (t * ray.direction.x);
+	float z = ray.origin.z + (t * ray.direction.z);
+	return glm::vec3(x, y, z);
+}
+
+glm::vec3 Scene::getWorldPosFromMouseAtXZ(glm::vec2 mousePos, float x, float z) {
+	Raycast ray = getRayFromMouse(mousePos);
+	float t;
+	if (std::abs(ray.direction.x) > std::abs(ray.direction.z)) {
+        t = (x - ray.origin.x) / ray.direction.x;
+    } else {
+        t = (z - ray.origin.z) / ray.direction.z;
+    }
+
+    float y = ray.origin.y + t * ray.direction.y;
+    return glm::vec3(x, y, z);
 }

@@ -16,7 +16,7 @@ struct Entity : std::enable_shared_from_this<Entity>
     Transform transform;
     BoxCollider collider;
     int id;
-    std::array<float, 4> color = {0.0f, 1.0f, 0.0f, 1.0f};
+    std::array<float, 4> color = { 0.0f, 1.0f, 0.0f, 1.0f };
     virtual void onFrame(Scene&, const Input&) {}
     void applyMatrices(const Scene& scene) {
         model.material.uniforms.modelMatrix = calculateModelMatrix(transform);
@@ -33,10 +33,8 @@ struct Entity : std::enable_shared_from_this<Entity>
 
 struct Terrain : Entity
 {
-    void onFrame(Scene& scene, const Input& input) override
+    void onFrame(Scene& scene, const Input&) override
     {
-        (void)scene;
-        (void)input;
         applyMatrices(scene);
     }
     Model* getModel() override {

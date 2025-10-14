@@ -59,9 +59,10 @@ struct CircleBoundCamera : Camera {
         theta = 0.0f;
         radius = _radius;
         speed = 0.01f;
-        position = posOnCircle(target, theta, 0.0f, _radius, position.y);
+        position = posOnCircle(0.0f, position.y);
     }
     void onFrame(Scene& scene, const Input& input) override;
+    glm::vec3 posOnCircle(float delta, float yPos);
 };
 
 struct FirstPersonCamera : Camera {
