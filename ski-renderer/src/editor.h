@@ -3,6 +3,7 @@
 
 struct EditorTool {
     glm::vec3 offset;
+    glm::vec3 startPosition;
 
     virtual bool handleMouseDown(Scene&, const Input&, Editor&) {
         return false;
@@ -30,7 +31,7 @@ struct YDragTool : EditorTool {
 };
 
 struct Editor {
-    std::shared_ptr<Entity> selectedForEdit;
+    std::shared_ptr<Entity> selectedEntity;
     glm::vec2 lastFrameMousePos;
     SelectionTool selectionTool;
     std::unique_ptr<EditorTool> currentTool = std::make_unique<XZDragTool>();

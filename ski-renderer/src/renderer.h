@@ -39,7 +39,7 @@ void beginFrame();
 wgpu::TextureView getNextSurfaceTextureView();
 void createRenderPass();
 void initializePipelineDefaults();
-void createTexture();
+wgpu::Texture createTexture();
 
 wgpu::Adapter requestAdapterSync(WGPUInstance instance, WGPURequestAdapterOptions const *options);
 wgpu::Device requestDeviceSync(WGPUAdapter adapter, WGPUDeviceDescriptor const *descriptor);

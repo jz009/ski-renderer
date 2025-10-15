@@ -19,13 +19,20 @@ void Editor::onFrame(Scene& scene, const Input& input) {
         }
     }
     else if (input.wasKeyPressed(GLFW_KEY_Y)) {
-        currentTool = std::make_unique<YDragTool>(); 
+        currentTool = std::make_unique<YDragTool>();
     }
     else if (input.wasKeyPressed(GLFW_KEY_X)) {
         currentTool = std::make_unique<XZDragTool>();
     }
     else if (input.wasKeyPressed(GLFW_KEY_D)) {
-        
+        selectedEntity->model.material.uniforms.color = selectedEntity->color;
+        selectedEntity = scene.copyEntity(*selectedEntity.get());
+        selectedEntity->model.material.uniforms.color = Constants::EDIT_COLOR;
+        selectedEntity->transform.position += glm::vec3(3.0f, 0.0f, 3.0f);
+    }
+    else if (input.wasKeyPressed(GLFW_KEY_DELETE)) {
+        scene.deleteEntity(selectedEntity);
+        selectedEntity = nullptr;
     }
     else if (input.wasMouseReleased(GLFW_MOUSE_BUTTON_LEFT)) {
         mouseDown = false;
@@ -34,7 +41,7 @@ void Editor::onFrame(Scene& scene, const Input& input) {
         }
     }
 
-    if (isDragging && selectedForEdit) {
+    if (isDragging && selectedEntity) {
         currentTool->handleDrag(scene, input, *this);
     }
 
@@ -42,43 +49,57 @@ void Editor::onFrame(Scene& scene, const Input& input) {
 }
 
 bool XZDragTool::handleDrag(Scene& scene, const Input& input, Editor& editor) {
+    if (input.wasMousePressed(GLFW_MOUSE_BUTTON_RIGHT)) {
+        editor.selectedEntity->transform.position = startPosition;
+        editor.selectedEntity->model.material.uniforms.color = editor.selectedEntity->color;
+        editor.selectedEntity = nullptr;
+    }
+
     if (input.mousePosition == editor.lastFrameMousePos) {
         return false;
     }
 
-    glm::vec3 worldMousePosition = scene.getWorldPosFromMouseAtY(input.mousePosition, editor.selectedForEdit->transform.position.y) + offset;
+    glm::vec3 worldMousePosition = scene.getWorldPosFromMouseAtY(input.mousePosition, editor.selectedEntity->transform.position.y) + offset;
     if (input.isKeyDown(GLFW_KEY_LEFT_SHIFT)) {
         worldMousePosition.x = std::round(worldMousePosition.x);
         worldMousePosition.z = std::round(worldMousePosition.z);
     }
-    editor.selectedForEdit->transform.position = worldMousePosition;
+    editor.selectedEntity->transform.position = worldMousePosition;
     return true;
 }
 
 bool XZDragTool::handleMouseDown(Scene& scene, const Input& input, Editor& editor) {
-    offset = editor.selectedForEdit->transform.position - scene.getWorldPosFromMouseAtY(input.mousePosition, editor.selectedForEdit->transform.position.y);
+    startPosition = editor.selectedEntity->transform.position;
+    offset = editor.selectedEntity->transform.position - scene.getWorldPosFromMouseAtY(input.mousePosition, editor.selectedEntity->transform.position.y);
     offset.y = 0.0f;
     return true;
 }
 
 bool YDragTool::handleMouseDown(Scene& scene, const Input& input, Editor& editor) {
-    offset = editor.selectedForEdit->transform.position - scene.getWorldPosFromMouseAtXZ(input.mousePosition, editor.selectedForEdit->transform.position.x, editor.selectedForEdit->transform.position.z);
+    startPosition = editor.selectedEntity->transform.position;
+    offset = editor.selectedEntity->transform.position - scene.getWorldPosFromMouseAtXZ(input.mousePosition, editor.selectedEntity->transform.position.x, editor.selectedEntity->transform.position.z);
     offset.x = 0.0f;
     offset.z = 0.0f;
     return true;
 }
 
 bool YDragTool::handleDrag(Scene& scene, const Input& input, Editor& editor) {
+    if (input.wasMousePressed(GLFW_MOUSE_BUTTON_RIGHT)) {
+        editor.selectedEntity->transform.position = startPosition;
+        editor.selectedEntity->model.material.uniforms.color = editor.selectedEntity->color;
+        editor.selectedEntity = nullptr;
+    }
+
     if (input.mousePosition == editor.lastFrameMousePos) {
         return false;
     }
 
-    glm::vec3 worldMousePosition = scene.getWorldPosFromMouseAtXZ(input.mousePosition, editor.selectedForEdit->transform.position.x, editor.selectedForEdit->transform.position.z) + offset;
+    glm::vec3 worldMousePosition = scene.getWorldPosFromMouseAtXZ(input.mousePosition, editor.selectedEntity->transform.position.x, editor.selectedEntity->transform.position.z) + offset;
 
     if (input.isKeyDown(GLFW_KEY_LEFT_SHIFT)) {
         worldMousePosition.y = std::round(worldMousePosition.y);
     }
-    editor.selectedForEdit->transform.position = worldMousePosition;
+    editor.selectedEntity->transform.position = worldMousePosition;
     return true;
 }
 
@@ -87,27 +108,27 @@ bool SelectionTool::handleMouseDown(Scene& scene, const Input& input, Editor& ed
     Raycast ray = scene.getRayFromMouse(mousePos);
     auto colliders = scene.getRayCollisions(ray);
     if (colliders.empty()) {
-        if (editor.selectedForEdit) {
-            editor.selectedForEdit->model.material.uniforms.color = editor.selectedForEdit->color;
-            editor.selectedForEdit = nullptr;
+        if (editor.selectedEntity) {
+            editor.selectedEntity->model.material.uniforms.color = editor.selectedEntity->color;
+            editor.selectedEntity = nullptr;
         }
         return true;
     }
 
-    if (editor.selectedForEdit) {
-        editor.selectedForEdit->model.material.uniforms.color = editor.selectedForEdit->color;
+    if (editor.selectedEntity) {
+        editor.selectedEntity->model.material.uniforms.color = editor.selectedEntity->color;
     }
 
     RayCollision collision = colliders.front();
-    editor.selectedForEdit = collision.entity;
-    editor.selectedForEdit->model.material.uniforms.color = Constants::EDIT_COLOR;
+    editor.selectedEntity = collision.entity;
+    editor.selectedEntity->model.material.uniforms.color = Constants::EDIT_COLOR;
     return false;
 }
 
 void Editor::endEditMode(Scene& scene) {
-    if (selectedForEdit) {
-        selectedForEdit->model.material.uniforms.color = selectedForEdit->color;
+    if (selectedEntity) {
+        selectedEntity->model.material.uniforms.color = selectedEntity->color;
     }
-    selectedForEdit = nullptr;
+    selectedEntity = nullptr;
     scene.navMesh = NavMesh(scene.entities);
 }

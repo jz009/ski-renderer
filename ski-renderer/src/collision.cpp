@@ -46,9 +46,9 @@ std::bitset<32> NavMesh::getLayers(glm::vec3 point) {
     return layers;
 }
 
-NavMesh::NavMesh(std::vector<std::shared_ptr<Entity>> entities) {
+NavMesh::NavMesh(const std::vector<std::shared_ptr<Entity>>& entities) {
     polygons.reserve(entities.size());
-    for (auto entity : entities) {
+    for (const auto& entity : entities) {
         if (isWalkable(entity->collider.layerMask) || isImpassable(entity->collider.layerMask)) {
             polygons.push_back(NavMeshBox(entity->collider.box, entity->collider.layerMask));
         }

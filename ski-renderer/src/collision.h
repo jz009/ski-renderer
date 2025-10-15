@@ -69,7 +69,7 @@ struct NavMesh {
     std::vector<NavMeshBox> polygons;
 
     NavMesh() {}
-    NavMesh(std::vector<std::shared_ptr<Entity>> entities);
+    NavMesh(const std::vector<std::shared_ptr<Entity>>& entities);
 
     std::bitset<32> getLayers(glm::vec3 point);
     bool lineOfSight(glm::vec3 a, glm::vec3 b);

@@ -29,7 +29,7 @@ int main()
 	scene.createEntity(EntityType::TERRAIN, cubeObj.box, Layer::IMPASSABLE, cube, Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-20.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.8f, 0.8f, 0.8f, 1.0 });
 
 
-	for (auto entity : scene.entities)
+	for (auto& entity : scene.entities)
 	{
 		entity->onFrame(scene, input);
 	}
@@ -54,7 +54,7 @@ int main()
 		if (scene.isEditing()) {
 			scene.editor.onFrame(scene, input);
 		}
-		for (auto entity : scene.entities)
+		for (auto& entity : scene.entities)
 		{
 			if (scene.isGame()) {
 				entity->onFrame(scene, input);

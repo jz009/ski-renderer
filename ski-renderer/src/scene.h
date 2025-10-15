@@ -26,6 +26,8 @@ struct Scene {
     bool isEditing();
     bool isGame();
     void createEntity(EntityType type, const AABB& boundingBox, std::bitset<32> layers, Model& model, const Transform& transform, std::array<float, 4Ui64> color);
+    std::shared_ptr<Entity> copyEntity(Entity entity);
+    void deleteEntity(std::shared_ptr<Entity> entity);
     std::vector<RayCollision> getRayCollisions(const Raycast& ray);
     Raycast getRayFromMouse(glm::vec2 mousePos);
     glm::vec3 getWorldPosFromMouseAtY(glm::vec2 mousePos, float y);

@@ -24,6 +24,23 @@ void Scene::createEntity(EntityType type, const AABB& boundingBox, std::bitset<3
     entities.push_back(entity);
 }
 
+std::shared_ptr<Entity> Scene::copyEntity(Entity entity) {
+    std::shared_ptr<Entity> entityCopy = std::make_shared<Entity>(BoxCollider(entity.collider.box, entity.collider.layerMask));
+    entityCopy->type = entity.type;
+    entityCopy->model = entity.model;
+    entityCopy->transform = entity.transform;
+    entityCopy->model.material.uniforms.color = entity.color;
+    entityCopy->model.material.uniforms.modelMatrix = calculateModelMatrix(entity.transform);
+    entityCopy->model.material.uniforms.viewMatrix = calculateViewMatrix(*camera);
+    entityCopy->collider.transformBox(entityCopy->model.material.uniforms.modelMatrix);
+    entities.push_back(entityCopy);
+	return entityCopy;
+}
+
+void Scene::deleteEntity(std::shared_ptr<Entity> entity) {
+	entities.erase(std::remove(entities.begin(), entities.end(), entity), entities.end());
+}
+
 bool Scene::isEditing() {
 	return state == SceneState::EDIT;
 }
