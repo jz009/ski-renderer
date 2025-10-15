@@ -2,11 +2,20 @@
 #include "includes_fwd.h"
 
 #include "rendering_utils.h"
-
+#include "transform.h"
 #include "camera.h"
 
+Uniforms::Uniforms(const Camera& camera)
+{
+    float fov = 2 * glm::atan(1 / camera.focalLength);
+    time = static_cast<float>(glfwGetTime());
+    color = { 0.0f, 1.0f, 0.4f, 1.0f };
+    modelMatrix = glm::mat4x4(1.0);
+    viewMatrix = glm::lookAt(camera.position, camera.target, camera.up);
+    projectionMatrix = glm::perspective(fov, camera.ratio, camera.near, camera.far);
+}
 
-ObjResult loadObj(const std::filesystem::path &geometry)
+ObjResult loadObj(const std::filesystem::path& geometry)
 {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -18,16 +27,16 @@ ObjResult loadObj(const std::filesystem::path &geometry)
 
     tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, geometry.string().c_str());
     vertexData.clear();
-    glm::vec3 min = {std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()};
-    glm::vec3 max = {std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest()};
-    for (const auto &shape : shapes)
+    glm::vec3 min = { std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max() };
+    glm::vec3 max = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest() };
+    for (const auto& shape : shapes)
     {
         size_t offset = vertexData.size();
         vertexData.resize(offset + shape.mesh.indices.size());
 
         for (size_t i = 0; i < shape.mesh.indices.size(); ++i)
         {
-            const tinyobj::index_t &idx = shape.mesh.indices[i];
+            const tinyobj::index_t& idx = shape.mesh.indices[i];
             auto x = attrib.vertices[3 * idx.vertex_index + 0];
             auto y = attrib.vertices[3 * idx.vertex_index + 1];
             auto z = attrib.vertices[3 * idx.vertex_index + 2];
@@ -42,23 +51,23 @@ ObjResult loadObj(const std::filesystem::path &geometry)
             vertexData[offset + i].position = {
                 x,
                 -y,
-                z};
+                z };
 
             vertexData[offset + i].normal = {
                 attrib.normals[3 * idx.normal_index + 0],
                 -attrib.normals[3 * idx.normal_index + 2],
-                attrib.normals[3 * idx.normal_index + 1]};
+                attrib.normals[3 * idx.normal_index + 1] };
 
             vertexData[offset + i].color = {
                 attrib.colors[3 * idx.vertex_index + 0],
                 attrib.colors[3 * idx.vertex_index + 1],
-                attrib.colors[3 * idx.vertex_index + 2]};
+                attrib.colors[3 * idx.vertex_index + 2] };
         }
     }
-    return ObjResult{vertexData, {min, max}};
+    return ObjResult{ vertexData, {min, max} };
 }
 
-std::vector<VertexAttributes> load2D(const std::filesystem::path &geometry)
+std::vector<VertexAttributes> load2D(const std::filesystem::path& geometry)
 {
     std::vector<VertexAttributes> vertexData;
 
@@ -98,19 +107,19 @@ std::vector<VertexAttributes> load2D(const std::filesystem::path &geometry)
         {
             std::istringstream iss(line);
             iss >> x >> y >> z;
-            vertexData.push_back({glm::vec3(x, y, z), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0)});
+            vertexData.push_back({ glm::vec3(x, y, z), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0) });
         }
     }
     return vertexData;
 }
 
 glm::mat4x4 calculateModelMatrix(const Transform& transform) {
-   return glm::translate(glm::mat4x4(1.0), transform.offset) * glm::translate(glm::mat4x4(1.0), transform.position) * glm::scale(glm::mat4x4(1.0), transform.scale);
-    
+    return glm::translate(glm::mat4x4(1.0), transform.offset) * glm::translate(glm::mat4x4(1.0), transform.position) * glm::scale(glm::mat4x4(1.0), transform.scale);
+
 }
 
 glm::mat4x4 calculateViewMatrix(const Camera& camera) {
-   return glm::lookAt(camera.position, camera.target, camera.up);
+    return glm::lookAt(camera.position, camera.target, camera.up);
 }
 
 glm::mat4x4 calculateProjectionMatrix(const Camera& camera) {

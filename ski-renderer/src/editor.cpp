@@ -4,8 +4,10 @@
 #include "editor.h"
 #include "scene.h"
 #include "entity.h"
+#include "input.h"
 
 void Editor::onFrame(Scene& scene, const Input& input) {
+
     bool isDragging = mouseDown;
     if (input.wasMousePressed(GLFW_MOUSE_BUTTON_LEFT)) {
         if (!mouseDown)
@@ -22,12 +24,16 @@ void Editor::onFrame(Scene& scene, const Input& input) {
     else if (input.wasKeyPressed(GLFW_KEY_X)) {
         currentTool = std::make_unique<XZDragTool>();
     }
+    else if (input.wasKeyPressed(GLFW_KEY_D)) {
+        
+    }
     else if (input.wasMouseReleased(GLFW_MOUSE_BUTTON_LEFT)) {
         mouseDown = false;
         if (!selectionTool.handleMouseUp(scene, input, *this)) {
             currentTool->handleMouseUp(scene, input, *this);
         }
     }
+
     if (isDragging && selectedForEdit) {
         currentTool->handleDrag(scene, input, *this);
     }
@@ -39,6 +45,7 @@ bool XZDragTool::handleDrag(Scene& scene, const Input& input, Editor& editor) {
     if (input.mousePosition == editor.lastFrameMousePos) {
         return false;
     }
+
     glm::vec3 worldMousePosition = scene.getWorldPosFromMouseAtY(input.mousePosition, editor.selectedForEdit->transform.position.y) + offset;
     if (input.isKeyDown(GLFW_KEY_LEFT_SHIFT)) {
         worldMousePosition.x = std::round(worldMousePosition.x);
@@ -65,12 +72,12 @@ bool YDragTool::handleDrag(Scene& scene, const Input& input, Editor& editor) {
     if (input.mousePosition == editor.lastFrameMousePos) {
         return false;
     }
+
     glm::vec3 worldMousePosition = scene.getWorldPosFromMouseAtXZ(input.mousePosition, editor.selectedForEdit->transform.position.x, editor.selectedForEdit->transform.position.z) + offset;
 
     if (input.isKeyDown(GLFW_KEY_LEFT_SHIFT)) {
         worldMousePosition.y = std::round(worldMousePosition.y);
     }
-
     editor.selectedForEdit->transform.position = worldMousePosition;
     return true;
 }
@@ -93,7 +100,7 @@ bool SelectionTool::handleMouseDown(Scene& scene, const Input& input, Editor& ed
 
     RayCollision collision = colliders.front();
     editor.selectedForEdit = collision.entity;
-    collision.entity->model.material.uniforms.color = Constants::EDIT_COLOR;
+    editor.selectedForEdit->model.material.uniforms.color = Constants::EDIT_COLOR;
     return false;
 }
 

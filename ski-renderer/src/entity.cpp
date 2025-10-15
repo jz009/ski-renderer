@@ -2,8 +2,27 @@
 #include "includes_fwd.h"
 
 #include "entity.h"
+#include "scene.h"
+#include "movement.h"
+#include "rendering_utils.h"
+#include "camera.h"
+#include "AABB.h"
+#include "input.h"
+#include "collision.h"
 
-void Player::firstPersonOnFrame(Scene& scene, const Input& input) {
+void Entity::playerOnFrame(Scene& scene, const Input& input)
+{
+    if (scene.camera->type == CameraType::FirstPersonCamera) {
+        playerFirstPersonOnFrame(scene, input);
+    }
+    else if (scene.camera->type == CameraType::CircleBoundCamera) {
+        playerThirdPersonOnFrame(scene, input);
+    }
+    transform.position = movement.move(transform.position);
+    applyMatrices(scene);
+}
+
+void Entity::playerFirstPersonOnFrame(Scene& scene, const Input& input) {
     scene.camera->moveCamera(transform.position + glm::vec3(0.0, 5.0f, 0.0));
     if (input.isKeyDown(GLFW_KEY_W)) {
         glm::vec3 direction = scene.camera->direction;
@@ -16,11 +35,9 @@ void Player::firstPersonOnFrame(Scene& scene, const Input& input) {
     else if (input.isKeyDown(GLFW_KEY_A)) {
 
     }
-
-
 }
 
-void Player::thirdPersonOnFrame(Scene& scene, const Input& input) {
+void Entity::playerThirdPersonOnFrame(Scene& scene, const Input& input) {
     if (input.wasMousePressed(GLFW_MOUSE_BUTTON_LEFT))
     {
         glm::vec2 mousePos = input.mouseClickInput.mousePos;
@@ -29,9 +46,19 @@ void Player::thirdPersonOnFrame(Scene& scene, const Input& input) {
         if (!colliders.empty()) {
             RayCollision collision = colliders.front();
             if (isWalkable(collision.entity->collider.layerMask) && areClose(collision.intersection.near.y, collision.entity->collider.box.max.y)) {
-                auto path = findPath(shared_from_this(), collision.intersection.near, scene);
+                auto path = findPath(*this, collision.intersection.near, scene);
                 movement.targetPath = path;
             }
         }
     }
+}
+
+void Entity::terrainOnFrame(Scene& scene, const Input&) {
+    applyMatrices(scene);
+}
+
+void Entity::applyMatrices(const Scene& scene) {
+    model.material.uniforms.modelMatrix = calculateModelMatrix(transform);
+    model.material.uniforms.viewMatrix = scene.viewMatrix;
+    collider.transformBox(model.material.uniforms.modelMatrix);
 }

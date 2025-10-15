@@ -1,9 +1,7 @@
 #pragma once
 #include "includes_fwd.h"
 
-#include "camera.h"
 #include "AABB.h"
-#include "transform.h"
 
 struct Uniforms
 {
@@ -15,15 +13,7 @@ struct Uniforms
     float _pad[3];
 
     Uniforms::Uniforms() = default;
-    Uniforms(const Camera& camera)
-    {
-        float fov = 2 * glm::atan(1 / camera.focalLength);
-        time = static_cast<float>(glfwGetTime());
-        color = { 0.0f, 1.0f, 0.4f, 1.0f };
-        modelMatrix = glm::mat4x4(1.0);
-        viewMatrix = glm::lookAt(camera.position, camera.target, camera.up);
-        projectionMatrix = glm::perspective(fov, camera.ratio, camera.near, camera.far);
-    }
+    Uniforms(const Camera& camera);
 };
 
 struct VertexAttributes

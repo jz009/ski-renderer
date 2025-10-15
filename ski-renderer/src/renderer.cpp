@@ -2,6 +2,7 @@
 #include "includes_fwd.h"
 
 #include "renderer.h"
+#include "rendering_utils.h"
 
 Renderer::Renderer()
 {

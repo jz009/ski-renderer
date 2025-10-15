@@ -112,12 +112,12 @@ std::vector<glm::vec3> getNeighbors(glm::vec3 center, Scene& scene) {
     return neighbors;
 }
 
-std::deque<glm::vec3> findPath(std::shared_ptr<Entity> entity, const glm::vec3 target, Scene& scene) {
+std::deque<glm::vec3> findPath(const Entity& entity, const glm::vec3 target, Scene& scene) {
     int count = 0;
-    if (!areClose(entity->transform.position.y, target.y)) {
+    if (!areClose(entity.transform.position.y, target.y)) {
         return std::deque<glm::vec3>();
     }
-    bool lineOfSight = scene.navMesh.lineOfSight(entity->transform.position, target);
+    bool lineOfSight = scene.navMesh.lineOfSight(entity.transform.position, target);
 
     if (lineOfSight) {
         return { target };
@@ -128,7 +128,7 @@ std::deque<glm::vec3> findPath(std::shared_ptr<Entity> entity, const glm::vec3 t
     std::unordered_map<glm::vec3, glm::vec3> cameFrom;
     std::unordered_map<glm::vec3, float> gScore;
 
-    Candidate start = { entity->transform.position };
+    Candidate start = { entity.transform.position };
     start.f = glm::distance(start.position, target);
 
     candidates.push(start);

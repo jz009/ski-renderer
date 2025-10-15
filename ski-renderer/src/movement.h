@@ -10,4 +10,4 @@ struct Movement
     glm::vec3 firstPersonMove(glm::vec3 position, glm::vec3 direction);
 };
 
-std::deque<glm::vec3> findPath(std::shared_ptr<Entity> entity, glm::vec3 target, Scene& scene);
+std::deque<glm::vec3> findPath(const Entity& entity, glm::vec3 target, Scene& scene);

@@ -5,7 +5,7 @@
 #include "entity.h"
 #include "AABB.h"
 
-RayIntersection BoxCollider::rayBoxIntersect(Raycast ray)
+RayIntersection BoxCollider::rayBoxIntersect(Raycast ray) const
 {
     float tmin, tmax, tymin, tymax, tzmin, tzmax;
     glm::vec3 bounds[2] = { box.min, box.max };
@@ -48,7 +48,7 @@ std::bitset<32> NavMesh::getLayers(glm::vec3 point) {
 
 NavMesh::NavMesh(std::vector<std::shared_ptr<Entity>> entities) {
     polygons.reserve(entities.size());
-    for (std::shared_ptr<Entity> entity : entities) {
+    for (auto entity : entities) {
         if (isWalkable(entity->collider.layerMask) || isImpassable(entity->collider.layerMask)) {
             polygons.push_back(NavMeshBox(entity->collider.box, entity->collider.layerMask));
         }

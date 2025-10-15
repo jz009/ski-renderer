@@ -1,8 +1,6 @@
 #pragma once
 #include "includes_fwd.h"
 
-#include "rendering_utils.h"
-
 struct Renderer
 {
     DISALLOW_IMPLICIT_COPIES(Renderer)

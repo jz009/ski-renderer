@@ -1,10 +1,6 @@
 #pragma once
 #include "includes_fwd.h"
 
-#include "input.h"
-
-struct Editor;
-
 struct EditorTool {
     glm::vec3 offset;
 

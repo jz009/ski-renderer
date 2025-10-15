@@ -44,7 +44,7 @@ struct BoxCollider
     std::bitset<32> layerMask;
 
     BoxCollider(AABB _box, std::bitset<32> layers) : box(_box), unscaledBox(_box), layerMask(layers) {};
-    RayIntersection rayBoxIntersect(Raycast ray);
+    RayIntersection rayBoxIntersect(Raycast ray) const;
     void transformBox(const glm::mat4x4& modelMatrix);
 };
 

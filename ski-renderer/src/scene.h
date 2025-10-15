@@ -3,7 +3,6 @@
 
 #include "camera.h"
 #include "collision.h"
-#include "input.h"
 #include "editor.h"
 
 enum struct SceneState {
@@ -23,18 +22,14 @@ struct Scene {
     Editor editor;
     int nextId = 0;
 
-    void addEntity(std::shared_ptr<Entity> entity);
     void useCamera(CameraType cameraType, const Input& input);
     bool isEditing();
     bool isGame();
+    void createEntity(EntityType type, const AABB& boundingBox, std::bitset<32> layers, Model& model, const Transform& transform, std::array<float, 4Ui64> color);
     std::vector<RayCollision> getRayCollisions(const Raycast& ray);
     Raycast getRayFromMouse(glm::vec2 mousePos);
     glm::vec3 getWorldPosFromMouseAtY(glm::vec2 mousePos, float y);
     glm::vec3 getWorldPosFromMouseAtXZ(glm::vec2 mousePos, float x, float z);
     void onFrame(const Input& input);
-    Scene::Scene() {
-        cameras[(int)CameraType::CircleBoundCamera] = std::make_shared<CircleBoundCamera>(20.0f);
-        cameras[(int)CameraType::FirstPersonCamera] = std::make_shared<FirstPersonCamera>();
-        camera = cameras[(int)CameraType::CircleBoundCamera];
-    }
+    Scene();
 };

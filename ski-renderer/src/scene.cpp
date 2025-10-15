@@ -3,6 +3,26 @@
 
 #include "scene.h"
 #include "entity.h"
+#include "camera.h"
+#include "input.h"
+
+Scene::Scene() {
+	cameras[(int)CameraType::CircleBoundCamera] = std::make_shared<CircleBoundCamera>(20.0f);
+	cameras[(int)CameraType::FirstPersonCamera] = std::make_shared<FirstPersonCamera>();
+	camera = cameras[(int)CameraType::CircleBoundCamera];
+}
+
+void Scene::createEntity(EntityType type, const AABB& boundingBox, std::bitset<32> layers, Model& model, const Transform& transform, std::array<float, 4Ui64> color) {
+    std::shared_ptr<Entity> entity = std::make_shared<Entity>(BoxCollider(boundingBox, layers));
+    entity->type = type;
+    entity->model = model;
+    entity->transform = transform;
+    entity->model.material.uniforms.color = color;
+    entity->model.material.uniforms.modelMatrix = calculateModelMatrix(transform);
+    entity->model.material.uniforms.viewMatrix = calculateViewMatrix(*camera);
+    entity->collider.transformBox(model.material.uniforms.modelMatrix);
+    entities.push_back(entity);
+}
 
 bool Scene::isEditing() {
 	return state == SceneState::EDIT;
@@ -10,12 +30,6 @@ bool Scene::isEditing() {
 
 bool Scene::isGame() {
 	return state == SceneState::GAME;
-}
-
-void Scene::addEntity(std::shared_ptr<Entity> entity) {
-	entity->id = nextId;
-	entities.push_back(entity);
-	nextId++;
 }
 
 void Scene::useCamera(CameraType cameraType, const Input& input) {
@@ -50,7 +64,7 @@ void Scene::onFrame(const Input& input) {
 std::vector<RayCollision> Scene::getRayCollisions(const Raycast& ray)
 {
 	std::vector<RayCollision> collisions;
-	for (std::shared_ptr<Entity> entity : entities)
+	for (const auto& entity : entities)
 	{
 		RayIntersection intersection = entity->collider.rayBoxIntersect(ray);
 		if (intersection.intersected)
@@ -84,11 +98,12 @@ glm::vec3 Scene::getWorldPosFromMouseAtXZ(glm::vec2 mousePos, float x, float z) 
 	Raycast ray = getRayFromMouse(mousePos);
 	float t;
 	if (std::abs(ray.direction.x) > std::abs(ray.direction.z)) {
-        t = (x - ray.origin.x) / ray.direction.x;
-    } else {
-        t = (z - ray.origin.z) / ray.direction.z;
-    }
+		t = (x - ray.origin.x) / ray.direction.x;
+	}
+	else {
+		t = (z - ray.origin.z) / ray.direction.z;
+	}
 
-    float y = ray.origin.y + t * ray.direction.y;
-    return glm::vec3(x, y, z);
+	float y = ray.origin.y + t * ray.direction.y;
+	return glm::vec3(x, y, z);
 }

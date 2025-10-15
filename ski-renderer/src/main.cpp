@@ -9,29 +9,6 @@
 #include "camera.h"
 #include "scene.h"
 
-std::shared_ptr<Player> createPlayer(const std::string& name, const AABB& boundingBox, std::bitset<32> layers, Model& model, const Transform& transform, std::array<float, 4Ui64> color, const Scene& scene) {
-	auto player = std::make_shared<Player>(BoxCollider(boundingBox, layers));
-	player->name = name;
-	player->model = model;
-	player->transform = transform;
-	player->model.material.uniforms.color = color;
-	model.material.uniforms.modelMatrix = calculateModelMatrix(transform);
-	model.material.uniforms.viewMatrix = calculateViewMatrix(*scene.camera);
-	player->collider.transformBox(model.material.uniforms.modelMatrix);
-	return player;
-}
-
-std::shared_ptr<Terrain> createTerrain(const std::string& name, const AABB& boundingBox, std::bitset<32> layers, Model& model, const Transform& transform, std::array<float, 4Ui64> color, const Scene& scene) {
-	auto terrain = std::make_shared<Terrain>(BoxCollider(boundingBox, layers));
-	terrain->name = name;
-	terrain->model = model;
-	terrain->transform = transform;
-	terrain->model.material.uniforms.color = color;
-	model.material.uniforms.modelMatrix = calculateModelMatrix(transform);
-	model.material.uniforms.viewMatrix = calculateViewMatrix(*scene.camera);
-	terrain->collider.transformBox(model.material.uniforms.modelMatrix);
-	return terrain;
-}
 
 int main()
 {
@@ -46,17 +23,13 @@ int main()
 	ObjResult cubeObj = loadObj(Constants::mCUBE);
 	Model cube = renderer.createModel(cubeObj.vertexData, basic);
 
-	auto player = createPlayer("player", cubeObj.box, Layer::PLAYER, cube, Transform(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0)), { 0.7f, 0.3f, 0.3f, 1.0 }, scene);
-	auto terrain = createTerrain("ground", cubeObj.box, Layer::WALKABLE, cube, Transform(glm::vec3(20.0, 1.0, 20.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.3f, 1.0f, 0.0, 1.0 }, scene);
-	auto terrain2 = createTerrain("wall1", cubeObj.box, Layer::IMPASSABLE, cube, Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.8f, 0.8f, 0.8f, 1.0 }, scene);
-	auto terrain3 = createTerrain("wall2", cubeObj.box, Layer::IMPASSABLE, cube, Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-20.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.8f, 0.8f, 0.8f, 1.0 }, scene);
+	scene.createEntity(EntityType::PLAYER, cubeObj.box, Layer::PLAYER, cube, Transform(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0)), { 0.7f, 0.3f, 0.3f, 1.0 });
+	scene.createEntity(EntityType::TERRAIN, cubeObj.box, Layer::WALKABLE, cube, Transform(glm::vec3(20.0, 1.0, 20.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.3f, 1.0f, 0.0, 1.0 });
+	scene.createEntity(EntityType::TERRAIN, cubeObj.box, Layer::IMPASSABLE, cube, Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.8f, 0.8f, 0.8f, 1.0 });
+	scene.createEntity(EntityType::TERRAIN, cubeObj.box, Layer::IMPASSABLE, cube, Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-20.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.8f, 0.8f, 0.8f, 1.0 });
 
-	scene.addEntity(player);
-	scene.addEntity(terrain);
-	scene.addEntity(terrain2);
-	scene.addEntity(terrain3);
 
-	for (const auto& entity : scene.entities)
+	for (auto entity : scene.entities)
 	{
 		entity->onFrame(scene, input);
 	}
@@ -78,19 +51,19 @@ int main()
 		renderer.beginFrame();
 		scene.onFrame(input);
 		scene.camera->onFrame(scene, input);
-		for (const auto& entity : scene.entities)
+		if (scene.isEditing()) {
+			scene.editor.onFrame(scene, input);
+		}
+		for (auto entity : scene.entities)
 		{
-			if (scene.state == SceneState::GAME) {
+			if (scene.isGame()) {
 				entity->onFrame(scene, input);
-			} 
-			else if (scene.state == SceneState::EDIT) {
-				scene.editor.onFrame(scene, input);
+			}
+			else if (scene.isEditing()) {
 				entity->applyMatrices(scene);
 			}
 
-			if (Model* model = entity->getModel()) {
-				renderer.draw(*model);
-			}
+			renderer.draw(entity->model);
 		}
 		renderer.endFrame();
 		input.clear();

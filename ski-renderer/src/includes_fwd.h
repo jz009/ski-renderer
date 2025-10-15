@@ -40,14 +40,24 @@
     T(const T&) = delete; \
     T operator=(const T&) const = delete; 
 
+struct Scene;
+struct Input;
+struct Editor;
 struct Entity;
-struct Scene;
-struct AABB;
-struct BoxCollider;
-struct Scene;
 struct Camera;
+struct Model;
+struct AABB;
+struct AABB2D;
+struct Transform;
+struct Material;
+struct VertexAttributes;
+struct Uniforms;
 struct Raycast;
-struct Player;
+struct NavMesh;
+struct BoxCollider;
+struct RayCollision;
+struct Movement;
+enum struct EntityType;
 
 struct Constants
 {

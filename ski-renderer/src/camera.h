@@ -1,8 +1,6 @@
 #pragma once
 #include "includes_fwd.h"
 
-#include "input.h"
-
 glm::vec3 posOnCircle(glm::vec3 target, float& theta, float delta, float radius, float yPos);
 
 enum struct CameraState {
@@ -20,7 +18,7 @@ struct Camera
 {
     DISALLOW_IMPLICIT_COPIES(Camera)
 
-        glm::vec3 position;
+    glm::vec3 position;
     glm::vec3 target;
     glm::vec3 up;
     glm::vec3 direction;
