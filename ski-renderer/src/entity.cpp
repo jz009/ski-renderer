@@ -58,7 +58,7 @@ void Entity::terrainOnFrame(Scene& scene, const Input&) {
 }
 
 void Entity::applyMatrices(const Scene& scene) {
-    model.material.uniforms.modelMatrix = calculateModelMatrix(transform);
-    model.material.uniforms.viewMatrix = scene.viewMatrix;
-    collider.transformBox(model.material.uniforms.modelMatrix);
+    model.transforms.modelMatrix = calculateModelMatrix(transform);
+    model.transforms.viewMatrix = scene.viewMatrix;
+    collider.transformBox(model.transforms.modelMatrix);
 }

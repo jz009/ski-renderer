@@ -12,27 +12,29 @@ Scene::Scene() {
 	camera = cameras[(int)CameraType::CircleBoundCamera];
 }
 
-void Scene::createEntity(EntityType type, const AABB& boundingBox, std::bitset<32> layers, Model& model, const Transform& transform, std::array<float, 4Ui64> color) {
-    std::shared_ptr<Entity> entity = std::make_shared<Entity>(BoxCollider(boundingBox, layers));
+void Scene::createEntity(EntityType type, const AABB& boundingBox, std::bitset<32> layers, Model& model, const Transform& transform, glm::vec4 color) {
+    std::shared_ptr<Entity> entity = std::make_shared<Entity>(BoxCollider(boundingBox, layers), *camera);
     entity->type = type;
     entity->model = model;
     entity->transform = transform;
+	entity->color = color;
     entity->model.material.uniforms.color = color;
-    entity->model.material.uniforms.modelMatrix = calculateModelMatrix(transform);
-    entity->model.material.uniforms.viewMatrix = calculateViewMatrix(*camera);
-    entity->collider.transformBox(model.material.uniforms.modelMatrix);
+    entity->model.transforms.modelMatrix = calculateModelMatrix(transform);
+    entity->model.transforms.viewMatrix = calculateViewMatrix(*camera);
+    entity->collider.transformBox(model.transforms.modelMatrix);
     entities.push_back(entity);
 }
 
 std::shared_ptr<Entity> Scene::copyEntity(Entity entity) {
-    std::shared_ptr<Entity> entityCopy = std::make_shared<Entity>(BoxCollider(entity.collider.box, entity.collider.layerMask));
+    std::shared_ptr<Entity> entityCopy = std::make_shared<Entity>(BoxCollider(entity.collider.unscaledBox, entity.collider.layerMask), *camera);
     entityCopy->type = entity.type;
     entityCopy->model = entity.model;
     entityCopy->transform = entity.transform;
+	entityCopy->color = entity.color;
     entityCopy->model.material.uniforms.color = entity.color;
-    entityCopy->model.material.uniforms.modelMatrix = calculateModelMatrix(entity.transform);
-    entityCopy->model.material.uniforms.viewMatrix = calculateViewMatrix(*camera);
-    entityCopy->collider.transformBox(entityCopy->model.material.uniforms.modelMatrix);
+    entityCopy->model.transforms.modelMatrix = calculateModelMatrix(entityCopy->transform);
+    entityCopy->model.transforms.viewMatrix = calculateViewMatrix(*camera);
+    entityCopy->collider.transformBox(entityCopy->model.transforms.modelMatrix);
     entities.push_back(entityCopy);
 	return entityCopy;
 }
@@ -74,13 +76,14 @@ void Scene::onFrame(const Input& input) {
 
 		useCamera(CameraType::CircleBoundCamera, input);
 	}
-
+	// currentCursor->material.uniforms.position = glm::vec4(input.mousePosition / glm::vec2(Constants::WIDTH, Constants::HEIGHT), 0.0f, 1.0f);
 	viewMatrix = calculateViewMatrix(*camera);
 }
 
 std::vector<RayCollision> Scene::getRayCollisions(const Raycast& ray)
 {
 	std::vector<RayCollision> collisions;
+	collisions.reserve(entities.size());
 	for (const auto& entity : entities)
 	{
 		RayIntersection intersection = entity->collider.rayBoxIntersect(ray);
@@ -89,6 +92,7 @@ std::vector<RayCollision> Scene::getRayCollisions(const Raycast& ray)
 			collisions.push_back(RayCollision{ entity, intersection });
 		}
 	}
+	std::sort(collisions.begin(), collisions.end(), [this](RayCollision a, RayCollision b){ return glm::distance(this->camera->position, a.intersection.near) < glm::distance(this->camera->position, b.intersection.near); });
 	return collisions;
 }
 

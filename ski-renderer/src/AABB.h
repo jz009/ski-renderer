@@ -8,6 +8,10 @@ struct AABB
 
     AABB::AABB() = default;
     AABB(glm::vec3 _min, glm::vec3 _max) : min(_min), max(_max) {}
+    AABB(glm::vec3 center, float halfWidth) {
+        min = glm::vec3(center.x + halfWidth, center.y + halfWidth, center.z + halfWidth);
+        max = glm::vec3(center.x - halfWidth, center.y - halfWidth, center.z - halfWidth);
+    }
 
     void AABB::print()
     {

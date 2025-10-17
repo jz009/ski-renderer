@@ -4,6 +4,7 @@
 #include "camera.h"
 #include "collision.h"
 #include "editor.h"
+#include "rendering_utils.h"
 
 enum struct SceneState {
     GAME,
@@ -25,7 +26,7 @@ struct Scene {
     void useCamera(CameraType cameraType, const Input& input);
     bool isEditing();
     bool isGame();
-    void createEntity(EntityType type, const AABB& boundingBox, std::bitset<32> layers, Model& model, const Transform& transform, std::array<float, 4Ui64> color);
+    void createEntity(EntityType type, const AABB& boundingBox, std::bitset<32> layers, Model& model, const Transform& transform, glm::vec4 color);
     std::shared_ptr<Entity> copyEntity(Entity entity);
     void deleteEntity(std::shared_ptr<Entity> entity);
     std::vector<RayCollision> getRayCollisions(const Raycast& ray);

@@ -18,7 +18,7 @@ struct Entity
     Transform transform;
     BoxCollider collider;
     Movement movement;
-    std::array<float, 4> color = { 0.0f, 1.0f, 0.0f, 1.0f };
+    glm::vec4 color;
     void onFrame(Scene& scene, const Input& input) {
         switch (type) {
         case EntityType::PLAYER:
@@ -34,5 +34,5 @@ struct Entity
     void playerThirdPersonOnFrame(Scene& scene, const Input& input);
     void terrainOnFrame(Scene& scene, const Input&);
     void applyMatrices(const Scene& scene);
-    Entity::Entity(BoxCollider box) : collider(box) {}
+    Entity::Entity(BoxCollider box, const Camera& camera) : collider(box), model(camera) {}
 };

@@ -17,6 +17,7 @@ Renderer::Renderer()
 
     wgpu::RequestAdapterOptions adapterOpts = {};
     adapterOpts.nextInChain = nullptr;
+    adapterOpts.powerPreference = wgpu::PowerPreference::HighPerformance;
     adapterOpts.compatibleSurface = surface;
     wgpu::Adapter adapter = requestAdapterSync(instance, &adapterOpts);
 
@@ -30,13 +31,13 @@ Renderer::Renderer()
 
     device = requestDeviceSync(adapter, &deviceDesc);
 
-    auto onDeviceError = [](WGPUErrorType type, char const *message, void * /* pUserData */)
-    {
-        std::cout << "Uncaptured device error: type " << type;
-        if (message)
-            std::cout << " (" << message << ")";
-        std::cout << std::endl;
-    };
+    auto onDeviceError = [](WGPUErrorType type, char const* message, void* /* pUserData */)
+        {
+            std::cout << "Uncaptured device error: type " << type;
+            if (message)
+                std::cout << " (" << message << ")";
+            std::cout << std::endl;
+        };
     wgpuDeviceSetUncapturedErrorCallback(device, onDeviceError, nullptr /* pUserData */);
 
     queue = wgpuDeviceGetQueue(device);
@@ -66,10 +67,6 @@ Renderer::Renderer()
 
 void Renderer::terminate()
 {
-    wgpuPipelineLayoutRelease(pipelineDefaults.defaultLayout);
-    wgpuBindGroupLayoutRelease(pipelineDefaults.defaultBindGroupLayout);
-    // wgpuBufferRelease(pointBuffer);
-    // wgpuBufferRelease(indexBuffer);
     wgpuTextureViewRelease(pipelineDefaults.depthTextureView);
     wgpuTextureDestroy(pipelineDefaults.depthTexture);
     wgpuTextureRelease(pipelineDefaults.depthTexture);
@@ -89,7 +86,7 @@ void Renderer::createRenderPass()
     renderPassColorAttachment.resolveTarget = nullptr;
     renderPassColorAttachment.loadOp = wgpu::LoadOp::Load;
     renderPassColorAttachment.storeOp = wgpu::StoreOp::Store;
-    renderPassColorAttachment.clearValue = wgpu::Color{0.05, 0.05, 0.05, 1.0};
+    renderPassColorAttachment.clearValue = wgpu::Color{ 0.05, 0.05, 0.05, 1.0 };
 #ifndef WEBGPU_BACKEND_WGPU
     renderPassColorAttachment.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
 #endif
@@ -181,10 +178,10 @@ void Renderer::initializePipelineDefaults()
     pipelineDefaults.depthTextureDesc.format = pipelineDefaults.depthTextureFormat;
     pipelineDefaults.depthTextureDesc.mipLevelCount = 1;
     pipelineDefaults.depthTextureDesc.sampleCount = 1;
-    pipelineDefaults.depthTextureDesc.size = {Constants::WIDTH, Constants::HEIGHT, 1};
+    pipelineDefaults.depthTextureDesc.size = { Constants::WIDTH, Constants::HEIGHT, 1 };
     pipelineDefaults.depthTextureDesc.usage = wgpu::TextureUsage::RenderAttachment;
     pipelineDefaults.depthTextureDesc.viewFormatCount = 1;
-    pipelineDefaults.depthTextureDesc.viewFormats = (WGPUTextureFormat *)&pipelineDefaults.depthTextureFormat;
+    pipelineDefaults.depthTextureDesc.viewFormats = (WGPUTextureFormat*)&pipelineDefaults.depthTextureFormat;
     pipelineDefaults.depthTexture = wgpuDeviceCreateTexture(device, &pipelineDefaults.depthTextureDesc);
 
     pipelineDefaults.depthTextureViewDesc = {};
@@ -196,27 +193,9 @@ void Renderer::initializePipelineDefaults()
     pipelineDefaults.depthTextureViewDesc.dimension = wgpu::TextureViewDimension::_2D;
     pipelineDefaults.depthTextureViewDesc.format = pipelineDefaults.depthTextureFormat;
     pipelineDefaults.depthTextureView = wgpuTextureCreateView(pipelineDefaults.depthTexture, &pipelineDefaults.depthTextureViewDesc);
-
-    pipelineDefaults.defaultBindingLayout = wgpu::Default;
-    pipelineDefaults.defaultBindingLayout.binding = 0;
-    pipelineDefaults.defaultBindingLayout.visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
-    pipelineDefaults.defaultBindingLayout.buffer.type = wgpu::BufferBindingType::Uniform;
-    pipelineDefaults.defaultBindingLayout.buffer.minBindingSize = sizeof(Uniforms);
-
-    pipelineDefaults.defaultBindGroupLayoutDesc = {};
-    pipelineDefaults.defaultBindGroupLayoutDesc.nextInChain = nullptr;
-    pipelineDefaults.defaultBindGroupLayoutDesc.entryCount = 1;
-    pipelineDefaults.defaultBindGroupLayoutDesc.entries = &pipelineDefaults.defaultBindingLayout;
-    pipelineDefaults.defaultBindGroupLayout = wgpuDeviceCreateBindGroupLayout(device, &pipelineDefaults.defaultBindGroupLayoutDesc);
-
-    pipelineDefaults.defaultPipelineLayoutDescriptor = {};
-    pipelineDefaults.defaultPipelineLayoutDescriptor.nextInChain = nullptr;
-    pipelineDefaults.defaultPipelineLayoutDescriptor.bindGroupLayoutCount = 1;
-    pipelineDefaults.defaultPipelineLayoutDescriptor.bindGroupLayouts = (WGPUBindGroupLayout *)&pipelineDefaults.defaultBindGroupLayout;
-    pipelineDefaults.defaultLayout = wgpuDeviceCreatePipelineLayout(device, &pipelineDefaults.defaultPipelineLayoutDescriptor);
 }
 
-Material Renderer::createMaterial(const std::filesystem::path &shaderPath, const Uniforms &uniforms)
+Material Renderer::createMaterial(const std::filesystem::path& shaderPath, const VisualUniforms& visualUniforms, uint64_t transformUniformSize, const wgpu::TextureView& texture, const wgpu::Sampler& sampler)
 {
     std::ifstream file(shaderPath);
     file.seekg(0, std::ios::end);
@@ -237,10 +216,50 @@ Material Renderer::createMaterial(const std::filesystem::path &shaderPath, const
 #endif
     shaderDesc.nextInChain = &shaderCodeDesc.chain;
     wgpu::ShaderModule shader = device.createShaderModule(shaderDesc);
-    return {shader, uniforms};
+    
+    std::vector<wgpu::BindGroupLayoutEntry>bindingLayoutEntries(4);
+    bindingLayoutEntries[0] = wgpu::BindGroupLayoutEntry(wgpu::Default);
+    bindingLayoutEntries[0].binding = 0;
+    bindingLayoutEntries[0].visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+    bindingLayoutEntries[0].buffer.type = wgpu::BufferBindingType::Uniform;
+    bindingLayoutEntries[0].buffer.minBindingSize = sizeof(visualUniforms);
+
+    bindingLayoutEntries[1] = wgpu::BindGroupLayoutEntry(wgpu::Default);
+    bindingLayoutEntries[1].binding = 1;
+    bindingLayoutEntries[1].visibility = wgpu::ShaderStage::Vertex | wgpu::ShaderStage::Fragment;
+    bindingLayoutEntries[1].buffer.type = wgpu::BufferBindingType::Uniform;
+    bindingLayoutEntries[1].buffer.minBindingSize = transformUniformSize;
+
+    bindingLayoutEntries[2] = wgpu::BindGroupLayoutEntry(wgpu::Default);
+    bindingLayoutEntries[2].binding = 2;
+    bindingLayoutEntries[2].visibility = wgpu::ShaderStage::Fragment;
+    bindingLayoutEntries[2].texture.sampleType = wgpu::TextureSampleType::Float;
+    bindingLayoutEntries[2].texture.viewDimension = wgpu::TextureViewDimension::_2D;
+    bindingLayoutEntries[2].texture.multisampled = 0;
+
+    bindingLayoutEntries[3] = wgpu::BindGroupLayoutEntry(wgpu::Default);
+    bindingLayoutEntries[3].binding = 3;
+    bindingLayoutEntries[3].visibility = wgpu::ShaderStage::Fragment;
+    bindingLayoutEntries[3].sampler.type = wgpu::SamplerBindingType::Filtering;
+
+    wgpu::BindGroupLayoutDescriptor bindGroupLayoutDesc = {};
+    bindGroupLayoutDesc.nextInChain = nullptr;
+    bindGroupLayoutDesc.entryCount = (uint32_t)bindingLayoutEntries.size();
+    bindGroupLayoutDesc.entries = bindingLayoutEntries.data();
+    wgpu::BindGroupLayout bindGroupLayout = device.createBindGroupLayout(bindGroupLayoutDesc);
+
+    wgpu::PipelineLayoutDescriptor pipelineLayoutDesc = {};
+    pipelineLayoutDesc.nextInChain = nullptr;
+    pipelineLayoutDesc.bindGroupLayoutCount = 1;
+    pipelineLayoutDesc.bindGroupLayouts = (WGPUBindGroupLayout*)&bindGroupLayout;
+    wgpu::PipelineLayout pipelineLayout = device.createPipelineLayout(pipelineLayoutDesc);
+
+    wgpu::RenderPipeline pipeline = createPipeline(shader, pipelineLayout);
+
+    return { {pipeline, bindGroupLayout}, visualUniforms, texture, sampler };
 }
 
-Model Renderer::createModel(const std::vector<VertexAttributes>& vertexData, const Material &material)
+Model Renderer::createModel(const std::vector<VertexAttributes>& vertexData, const Material& material, const TransformUniforms& transformUniforms)
 {
     wgpu::BufferDescriptor bufferDesc;
     bufferDesc.size = vertexData.size() * sizeof(VertexAttributes);
@@ -249,49 +268,107 @@ Model Renderer::createModel(const std::vector<VertexAttributes>& vertexData, con
     wgpu::Buffer vertexBuffer = device.createBuffer(bufferDesc);
     queue.writeBuffer(vertexBuffer, 0, vertexData.data(), bufferDesc.size);
 
-    uint32_t vertexCount = static_cast<int>(vertexData.size());
+    uint32_t vertexCount = (int)(vertexData.size());
 
-    return Model{vertexBuffer, vertexCount, material};
+    return Model(vertexBuffer, vertexCount, transformUniforms, material);
 }
 
-wgpu::Buffer Renderer::writeUniformBuffer(const Material &material)
+wgpu::TextureView Renderer::createTexture(const PixelData& pixelData) {
+    wgpu::TextureDescriptor textureDesc = {};
+    textureDesc.dimension = wgpu::TextureDimension::_2D;
+    textureDesc.size = { pixelData.width, pixelData.height, 1 };
+    textureDesc.mipLevelCount = 1;
+    textureDesc.sampleCount = 1;
+    textureDesc.format = wgpu::TextureFormat::RGBA8Unorm;
+    textureDesc.usage = wgpu::TextureUsage::TextureBinding | wgpu::TextureUsage::CopyDst;
+
+    wgpu::Texture texture = device.createTexture(textureDesc);
+
+    wgpu::ImageCopyTexture destination = {};
+    destination.texture = texture;
+    destination.mipLevel = 0;
+    destination.origin = { 0, 0, 0 };
+    destination.aspect = wgpu::TextureAspect::All;
+
+    wgpu::TextureDataLayout source = {};
+    source.offset = 0;
+    source.bytesPerRow = 4 * textureDesc.size.width;
+    source.rowsPerImage = textureDesc.size.height;
+
+    queue.writeTexture(destination, pixelData.pixels.data(), pixelData.pixels.size(), source, textureDesc.size);
+
+
+    wgpu::TextureViewDescriptor textureViewDesc;
+    textureViewDesc.aspect = wgpu::TextureAspect::All;
+    textureViewDesc.baseArrayLayer = 0;
+    textureViewDesc.arrayLayerCount = 1;
+    textureViewDesc.baseMipLevel = 0;
+    textureViewDesc.mipLevelCount = 1;
+    textureViewDesc.dimension = wgpu::TextureViewDimension::_2D;
+    textureViewDesc.format = textureDesc.format;
+    return texture.createView(textureViewDesc);
+}
+
+wgpu::Sampler Renderer::createSampler() {
+    wgpu::SamplerDescriptor samplerDesc;
+    samplerDesc.addressModeU = wgpu::AddressMode::ClampToEdge;
+    samplerDesc.addressModeV = wgpu::AddressMode::ClampToEdge;
+    samplerDesc.addressModeW = wgpu::AddressMode::ClampToEdge;
+    samplerDesc.magFilter = wgpu::FilterMode::Linear;
+    samplerDesc.minFilter = wgpu::FilterMode::Linear;
+    samplerDesc.mipmapFilter = wgpu::MipmapFilterMode::Linear;
+    samplerDesc.lodMinClamp = 0.0f;
+    samplerDesc.lodMaxClamp = 1.0f;
+    samplerDesc.compare = wgpu::CompareFunction::Undefined;
+    samplerDesc.maxAnisotropy = 1;
+    return device.createSampler(samplerDesc);
+}
+
+wgpu::Buffer Renderer::writeUniformBuffer(const Model& model)
 {
-    // // Create index buffer
-    // // (we reuse the bufferDesc initialized for the pointBuffer)
-    // bufferDesc.size = indexData.size() * sizeof(uint16_t);
-    // bufferDesc.size = (bufferDesc.size + 3) & ~3; // round up to the next multiple of 4
-    // bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Index;
-    // ;
-    // indexBuffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
-
-    // wgpuQueueWriteBuffer(queue, indexBuffer, 0, indexData.data(), bufferDesc.size);
-
     wgpu::BufferDescriptor bufferDesc;
-    bufferDesc.size = sizeof(Uniforms);
+    bufferDesc.size = 512;
     bufferDesc.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_Uniform;
+    bufferDesc.label = "Packed Uniform Buffer";
     bufferDesc.mappedAtCreation = false;
-    wgpu::Buffer uniformBuffer = wgpuDeviceCreateBuffer(device, &bufferDesc);
 
-    wgpuQueueWriteBuffer(queue, uniformBuffer, 0, &material.uniforms, sizeof(Uniforms));
+    wgpu::Buffer buffer = device.createBuffer(bufferDesc);
 
-    return uniformBuffer;
+    queue.writeBuffer(buffer, 0, &model.material.uniforms, sizeof(model.material.uniforms));
+    queue.writeBuffer(buffer, 256, &model.transforms, sizeof(model.transforms));
+
+    return buffer;
 }
 
-wgpu::BindGroup Renderer::initializeBindGroups(const wgpu::Buffer& uniformBuffer)
+wgpu::BindGroup Renderer::createBindGroups(wgpu::Buffer uniformBuffer, const Material& material)
 {
-    wgpu::BindGroupEntry binding{};
-    binding.nextInChain = nullptr;
-    binding.binding = 0;
-    binding.buffer = uniformBuffer;
-    binding.offset = 0;
-    binding.size = sizeof(Uniforms);
+    std::vector<wgpu::BindGroupEntry> bindings(4);
+    bindings[0].nextInChain = nullptr;
+    bindings[0].binding = 0;
+    bindings[0].buffer = uniformBuffer;
+    bindings[0].offset = 0;
+    bindings[0].size = 256;
+
+    bindings[1].nextInChain = nullptr;
+    bindings[1].binding = 1;
+    bindings[1].buffer = uniformBuffer;
+    bindings[1].offset = 256;
+    bindings[1].size = 256;
+
+    bindings[2].nextInChain = nullptr;
+    bindings[2].binding = 2;
+    bindings[2].textureView = material.texture;
+
+    bindings[3].nextInChain = nullptr;
+    bindings[3].binding = 3;
+    bindings[3].sampler = material.sampler;
 
     wgpu::BindGroupDescriptor bindGroupDesc{};
     bindGroupDesc.nextInChain = nullptr;
-    bindGroupDesc.layout = pipelineDefaults.defaultBindGroupLayout;
-    bindGroupDesc.entryCount = 1;
-    bindGroupDesc.entries = &binding;
-    return wgpuDeviceCreateBindGroup(device, &bindGroupDesc);
+    bindGroupDesc.layout = material.pipeline.bindGroupLayout;
+    bindGroupDesc.entryCount = (uint32_t)bindings.size();
+    bindGroupDesc.entries = bindings.data();
+    return device.createBindGroup(bindGroupDesc);
 }
 
 void Renderer::beginFrame()
@@ -302,20 +379,16 @@ void Renderer::beginFrame()
     createRenderPass();
 }
 
-void Renderer::draw(const Model &model)
+void Renderer::draw(const Model& model)
 {
-    wgpu::Buffer uniformBuffer = writeUniformBuffer(model.material);
-    wgpu::BindGroup bindGroup = initializeBindGroups(uniformBuffer);
-    wgpu::RenderPipeline pipeline = createPipeline(model.material.shader);
-
-    renderPass.setPipeline(pipeline);
+    wgpu::Buffer uniformBuffer = writeUniformBuffer(model);
+    wgpu::BindGroup bindGroup = createBindGroups(uniformBuffer, model.material);
+    renderPass.setPipeline(model.material.pipeline.pipeline);
     renderPass.setVertexBuffer(0, model.buffer, 0, model.buffer.getSize());
     renderPass.setBindGroup(0, bindGroup, 0, nullptr);
     renderPass.draw(model.vertexCount, 1, 0, 0);
     uniformBuffer.release();
     bindGroup.release();
-    pipeline.release();
-
 }
 
 void Renderer::endFrame()
@@ -342,14 +415,14 @@ void Renderer::endFrame()
 #endif
 }
 
-wgpu::RenderPipeline Renderer::createPipeline(const wgpu::ShaderModule& shaderModule)
+wgpu::RenderPipeline Renderer::createPipeline(const wgpu::ShaderModule& shaderModule, const wgpu::PipelineLayout& pipelineLayout)
 {
     wgpu::RenderPipelineDescriptor pipelineDesc{};
     pipelineDesc.nextInChain = nullptr;
 
     wgpu::VertexBufferLayout vertexBufferLayout{};
 
-    std::vector<wgpu::VertexAttribute> vertexAttribs(3);
+    std::vector<wgpu::VertexAttribute> vertexAttribs(4);
 
     vertexAttribs[0].shaderLocation = 0;
     vertexAttribs[0].format = wgpu::VertexFormat::Float32x3;
@@ -362,6 +435,10 @@ wgpu::RenderPipeline Renderer::createPipeline(const wgpu::ShaderModule& shaderMo
     vertexAttribs[2].shaderLocation = 2;
     vertexAttribs[2].format = wgpu::VertexFormat::Float32x3;
     vertexAttribs[2].offset = offsetof(VertexAttributes, color);
+
+    vertexAttribs[3].shaderLocation = 3;
+    vertexAttribs[3].format = wgpu::VertexFormat::Float32x2;
+    vertexAttribs[3].offset = offsetof(VertexAttributes, uv);
 
     vertexBufferLayout.attributeCount = static_cast<uint32_t>(vertexAttribs.size());
     vertexBufferLayout.attributes = vertexAttribs.data();
@@ -396,12 +473,12 @@ wgpu::RenderPipeline Renderer::createPipeline(const wgpu::ShaderModule& shaderMo
     pipelineDesc.multisample.mask = ~0u;
     pipelineDesc.multisample.alphaToCoverageEnabled = false;
 
-    pipelineDesc.layout = pipelineDefaults.defaultLayout;
+    pipelineDesc.layout = pipelineLayout;
 
     return device.createRenderPipeline(pipelineDesc);
 }
 
-wgpu::Adapter Renderer::requestAdapterSync(WGPUInstance instance, WGPURequestAdapterOptions const *options)
+wgpu::Adapter Renderer::requestAdapterSync(WGPUInstance instance, WGPURequestAdapterOptions const* options)
 {
     struct UserData
     {
@@ -410,32 +487,32 @@ wgpu::Adapter Renderer::requestAdapterSync(WGPUInstance instance, WGPURequestAda
     };
     UserData userData;
 
-    auto onAdapterRequestEnded = [](WGPURequestAdapterStatus status, WGPUAdapter adapter, char const *message, void *pUserData)
-    {
-        UserData &userData = *reinterpret_cast<UserData *>(pUserData);
-        if (status == WGPURequestAdapterStatus_Success)
+    auto onAdapterRequestEnded = [](WGPURequestAdapterStatus status, WGPUAdapter adapter, char const* message, void* pUserData)
         {
-            userData.adapter = adapter;
-        }
-        else
-        {
-            std::cout << "Could not get WebGPU adapter: " << message << std::endl;
-        }
-        userData.requestEnded = true;
-    };
+            UserData& userData = *reinterpret_cast<UserData*>(pUserData);
+            if (status == WGPURequestAdapterStatus_Success)
+            {
+                userData.adapter = adapter;
+            }
+            else
+            {
+                std::cout << "Could not get WebGPU adapter: " << message << std::endl;
+            }
+            userData.requestEnded = true;
+        };
 
     wgpuInstanceRequestAdapter(
         instance,
         options,
         onAdapterRequestEnded,
-        (void *)&userData);
+        (void*)&userData);
 
     assert(userData.requestEnded);
 
     return userData.adapter;
 }
 
-wgpu::Device Renderer::requestDeviceSync(WGPUAdapter adapter, WGPUDeviceDescriptor const *descriptor)
+wgpu::Device Renderer::requestDeviceSync(WGPUAdapter adapter, WGPUDeviceDescriptor const* descriptor)
 {
     struct UserData
     {
@@ -444,25 +521,25 @@ wgpu::Device Renderer::requestDeviceSync(WGPUAdapter adapter, WGPUDeviceDescript
     };
     UserData userData;
 
-    auto onDeviceRequestEnded = [](WGPURequestDeviceStatus status, WGPUDevice device, char const *message, void *pUserData)
-    {
-        UserData &userData = *reinterpret_cast<UserData *>(pUserData);
-        if (status == WGPURequestDeviceStatus_Success)
+    auto onDeviceRequestEnded = [](WGPURequestDeviceStatus status, WGPUDevice device, char const* message, void* pUserData)
         {
-            userData.device = device;
-        }
-        else
-        {
-            std::cout << "Could not get WebGPU device: " << message << std::endl;
-        }
-        userData.requestEnded = true;
-    };
+            UserData& userData = *reinterpret_cast<UserData*>(pUserData);
+            if (status == WGPURequestDeviceStatus_Success)
+            {
+                userData.device = device;
+            }
+            else
+            {
+                std::cout << "Could not get WebGPU device: " << message << std::endl;
+            }
+            userData.requestEnded = true;
+        };
 
     wgpuAdapterRequestDevice(
         adapter,
         descriptor,
         onDeviceRequestEnded,
-        (void *)&userData);
+        (void*)&userData);
 
     assert(userData.requestEnded);
 

@@ -5,11 +5,9 @@
 #include "transform.h"
 #include "camera.h"
 
-Uniforms::Uniforms(const Camera& camera)
+TransformUniforms::TransformUniforms(const Camera& camera)
 {
     float fov = 2 * glm::atan(1 / camera.focalLength);
-    time = static_cast<float>(glfwGetTime());
-    color = { 0.0f, 1.0f, 0.4f, 1.0f };
     modelMatrix = glm::mat4x4(1.0);
     viewMatrix = glm::lookAt(camera.position, camera.target, camera.up);
     projectionMatrix = glm::perspective(fov, camera.ratio, camera.near, camera.far);
@@ -62,6 +60,10 @@ ObjResult loadObj(const std::filesystem::path& geometry)
                 attrib.colors[3 * idx.vertex_index + 0],
                 attrib.colors[3 * idx.vertex_index + 1],
                 attrib.colors[3 * idx.vertex_index + 2] };
+
+            vertexData[offset + i].uv = {
+                1 - attrib.texcoords[2 * idx.texcoord_index + 0],
+                1 - attrib.texcoords[2 * idx.texcoord_index + 1]};
         }
     }
     return ObjResult{ vertexData, {min, max} };
@@ -111,6 +113,31 @@ std::vector<VertexAttributes> load2D(const std::filesystem::path& geometry)
         }
     }
     return vertexData;
+}
+
+PixelData loadBMP(const std::filesystem::path& filename) {
+    PixelData img{};
+    std::ifstream file(filename, std::ios::binary);
+
+    file.seekg(18, std::ios::beg);
+    file.read((char*)(&img.width), 4);
+    file.read((char*)(&img.height), 4);
+
+    uint32_t pixelOffset;
+    file.seekg(10, std::ios::beg);
+    file.read((char*)(&pixelOffset), 4);
+
+    uint16_t bpp;
+    file.seekg(28, std::ios::beg);
+    file.read((char*)(&bpp), 2);
+
+    file.seekg(pixelOffset, std::ios::beg);
+
+    size_t dataSize = img.height * img.width * 4;
+    img.pixels.resize(dataSize);
+    file.read((char*)(img.pixels.data()), dataSize);
+
+    return img;
 }
 
 glm::mat4x4 calculateModelMatrix(const Transform& transform) {

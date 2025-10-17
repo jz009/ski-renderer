@@ -53,6 +53,7 @@ bool XZDragTool::handleDrag(Scene& scene, const Input& input, Editor& editor) {
         editor.selectedEntity->transform.position = startPosition;
         editor.selectedEntity->model.material.uniforms.color = editor.selectedEntity->color;
         editor.selectedEntity = nullptr;
+        return true;
     }
 
     if (input.mousePosition == editor.lastFrameMousePos) {
@@ -88,6 +89,7 @@ bool YDragTool::handleDrag(Scene& scene, const Input& input, Editor& editor) {
         editor.selectedEntity->transform.position = startPosition;
         editor.selectedEntity->model.material.uniforms.color = editor.selectedEntity->color;
         editor.selectedEntity = nullptr;
+        return true;
     }
 
     if (input.mousePosition == editor.lastFrameMousePos) {

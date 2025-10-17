@@ -38,6 +38,7 @@ Input::Input(GLFWwindow* window_)
     glfwSetKeyCallback(window, keyCallback);
     glfwSetMouseButtonCallback(window, mouseButtonCallback);
     glfwSetCursorPosCallback(window, mousePositionCallback);
+    //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 }
 
 void Input::onKeyPress(int key, int scancode, int action, int mods)

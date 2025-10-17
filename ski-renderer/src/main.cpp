@@ -8,7 +8,7 @@
 #include "collision.h"
 #include "camera.h"
 #include "scene.h"
-
+#include "rendering_utils.h"
 
 int main()
 {
@@ -18,15 +18,25 @@ int main()
 	Input input(window);
 
 	Scene scene;
-
-	Material basic = renderer.createMaterial(Constants::sDEFAULT, Uniforms(*scene.camera));
+	PixelData cursorPd = loadBMP("textures/cursor.bmp");
+	PixelData handCursorPd = loadBMP("textures/hand_cursor.bmp");
+	wgpu::TextureView defaultCursor = renderer.createTexture(cursorPd);
+	wgpu::TextureView handCursor = renderer.createTexture(handCursorPd);
+	wgpu::Sampler sampler = renderer.createSampler();
+	Material basic = renderer.createMaterial(Constants::sDEFAULT, VisualUniforms(), sizeof(TransformUniforms), defaultCursor, sampler);
+	// Material defaultCursorMaterial = renderer.createMaterial("shaders/cursor.wgsl", Uniforms(*scene.camera), defaultCursor, sampler);
+	// Material handCursorMaterial = renderer.createMaterial("shaders/cursor.wgsl", Uniforms(*scene.camera), handCursor, sampler);
 	ObjResult cubeObj = loadObj(Constants::mCUBE);
-	Model cube = renderer.createModel(cubeObj.vertexData, basic);
+	//ObjResult squareObj = loadObj("models/square.obj");
+	Model cube = renderer.createModel(cubeObj.vertexData, basic, TransformUniforms(*scene.camera));
+	// scene.defaultCursor = renderer.createModel(cubeObj.vertexData, defaultCursorMaterial);
+	// scene.handCursor = renderer.createModel(squareObj.vertexData, handCursorMaterial);
 
-	scene.createEntity(EntityType::PLAYER, cubeObj.box, Layer::PLAYER, cube, Transform(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0)), { 0.7f, 0.3f, 0.3f, 1.0 });
-	scene.createEntity(EntityType::TERRAIN, cubeObj.box, Layer::WALKABLE, cube, Transform(glm::vec3(20.0, 1.0, 20.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.3f, 1.0f, 0.0, 1.0 });
-	scene.createEntity(EntityType::TERRAIN, cubeObj.box, Layer::IMPASSABLE, cube, Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.8f, 0.8f, 0.8f, 1.0 });
-	scene.createEntity(EntityType::TERRAIN, cubeObj.box, Layer::IMPASSABLE, cube, Transform(glm::vec3(1.0, 6.0, 5.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-20.0, 4.0, 0.0), glm::vec3(0.0, -1.0, 0.0)), { 0.8f, 0.8f, 0.8f, 1.0 });
+
+	scene.createEntity(EntityType::PLAYER, cubeObj.box, Layer::PLAYER, cube, Transform(glm::vec3(1.0, 1.0, 1.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.5, 0.0)), { 0.0f, 0.3f, 1.0f, 1.0 });
+	scene.createEntity(EntityType::TERRAIN, cubeObj.box, Layer::WALKABLE, cube, Transform(glm::vec3(40.0, 1.0, 40.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 0.0, 0.0), glm::vec3(0.0, -0.5, 0.0)), { 0.0f, 1.0f, 0.0f, 1.0 });
+	scene.createEntity(EntityType::TERRAIN, cubeObj.box, Layer::IMPASSABLE, cube, Transform(glm::vec3(1.0, 6.0, 10.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-10.0, 4.0, 0.0), glm::vec3(0.0, -0.5, 0.0)), { 0.0f, 1.0f, 0.0f, 1.0 });
+	scene.createEntity(EntityType::TERRAIN, cubeObj.box, Layer::IMPASSABLE, cube, Transform(glm::vec3(1.0, 6.0, 8.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(-20.0, 4.0, 0.0), glm::vec3(0.0, -0.5, 0.0)), { 0.0f, 1.0f, 0.0f, 1.0 });
 
 
 	for (auto& entity : scene.entities)
@@ -50,6 +60,7 @@ int main()
 		count = count + 1;
 		renderer.beginFrame();
 		scene.onFrame(input);
+		//renderer.draw(*scene.currentCursor);
 		scene.camera->onFrame(scene, input);
 		if (scene.isEditing()) {
 			scene.editor.onFrame(scene, input);

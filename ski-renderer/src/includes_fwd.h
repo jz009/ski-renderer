@@ -65,7 +65,7 @@ struct Constants
     static constexpr float MAX_RADIANS = (float)M_PI * 2.0f;
     static constexpr uint32_t WIDTH = 1500;
     static constexpr uint32_t HEIGHT = 1000;
-    static constexpr std::array<float, 4> EDIT_COLOR = {1.0f, 0.0f, 0.0f, 1.0f};
+    static constexpr glm::vec4 EDIT_COLOR = { 1.0f, 0.0f, 0.0f, 1.0f };
 
     static const std::string Constants::mCUBE;
     static const std::string Constants::sDEFAULT;
@@ -83,6 +83,11 @@ struct Time
 inline void newline()
 {
     printf("\n");
+}
+
+inline void printVec4(glm::vec4 vec)
+{
+    printf("%f, %f, %f, %f\n", vec.x, vec.y, vec.z, vec.a);
 }
 
 inline void printVec3(glm::vec3 vec)
